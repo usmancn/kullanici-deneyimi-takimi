@@ -253,11 +253,18 @@ public final class Ship implements ISimulationEntity {
      */
     private float computeOpacity(double lastSeenY, double sweepY) {
         float minOpacity    = config.getMinShipOpacity();
-        double distance     = sweepY - lastSeenY;
         double fadeDistance = config.getSweepFadeDistance();
+        
+        // Sweep'in gemiden ne kadar uzaklaştığını hesapla.
+        // Eğer sweepY < lastSeenY ise (örneğin sweep en tepeye çarpıp 0'a döndüyse),
+        // aradaki mesafeyi radar yüksekliğini ekleyerek buluruz (wrap-around).
+        double distance = sweepY - lastSeenY;
+        if (distance < 0.0) {
+            distance += config.getRadarHeight();
+        }
 
-        // Sweep henüz geçmemiş ya da çok uzakta → minimum görünürlük
-        if (distance < 0.0 || distance > fadeDistance) {
+        // Eğer sweep çok uzaktaysa → minimum görünürlük
+        if (distance > fadeDistance) {
             return minOpacity;
         }
 
