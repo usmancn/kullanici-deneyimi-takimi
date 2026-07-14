@@ -1,0 +1,16 @@
+# Derlenmiş dosyalar - git'e eklenmez
+out/
+
+# IDE dosyaları
+.idea/
+*.iml
+.vscode/
+*.classpath
+*.project
+.settings/
+
+# macOS sistem dosyaları
+.DS_Store
+
+# lib/ klasörü GIT'E EKLENİR (JOGL JAR'ları burada)
+# !lib/
