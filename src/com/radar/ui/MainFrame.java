@@ -42,8 +42,6 @@ public final class MainFrame extends JFrame {
     private static final String TAB_CPU   = "CPU";
     private static final String TAB_GPU   = "GPU";
 
-    private static final int WINDOW_WIDTH  = 1280;
-    private static final int WINDOW_HEIGHT = 1060;
 
     private final RadarPanel    radarPanel;
     private final MetricsPanel  cpuPanel;
@@ -68,7 +66,6 @@ public final class MainFrame extends JFrame {
         this.engine = engine;
 
         setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
-        setPreferredSize(new Dimension(WINDOW_WIDTH, WINDOW_HEIGHT));
         setMinimumSize(new Dimension(800, 600));
         getContentPane().setBackground(new Color(10, 10, 16));
 
