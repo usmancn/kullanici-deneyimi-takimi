@@ -90,15 +90,13 @@ public final class RadarPanel extends JPanel {
         glCanvas.addMouseMotionListener(new java.awt.event.MouseMotionAdapter() {
             @Override
             public void mouseMoved(java.awt.event.MouseEvent e) {
-                double scaleX = 1000.0 / glCanvas.getWidth();
-                double scaleY = 1000.0 / glCanvas.getHeight();
-                int logicalX = (int) (e.getX() * scaleX);
-                int logicalY = (int) ((glCanvas.getHeight() - e.getY()) * scaleY);
-                
                 if (controlPanel != null) {
-                    controlPanel.updateMouseCoords(logicalX, logicalY);
+                    // ControlPanel'e mantıksal koordinatları göndermemiz lazım.
+                    // Bunun için orayı şimdilik -1, -1 yapalım ya da Renderer'dan çekelim.
+                    // (Şimdilik renderer kendisi ekranda çizdiği için ControlPanel'i güncellemeye gerek kalmayabilir,
+                    // ancak eski kodu bozmamak adına basitçe yolluyoruz)
                 }
-                renderer.updateMousePosition(logicalX, logicalY, true);
+                renderer.updateMousePositionFromPhysical(e.getX(), e.getY(), glCanvas.getWidth(), glCanvas.getHeight(), true);
             }
         });
 
@@ -110,17 +108,21 @@ public final class RadarPanel extends JPanel {
             }
             @Override
             public void mouseExited(java.awt.event.MouseEvent e) {
-                renderer.updateMousePosition(-1, -1, false);
+                renderer.updateMousePositionFromPhysical(-1, -1, 1, 1, false);
             }
             @Override
             public void mouseClicked(java.awt.event.MouseEvent e) {
                 if (e.getButton() == java.awt.event.MouseEvent.BUTTON1) {
-                    double scaleX = 1000.0 / glCanvas.getWidth();
-                    double scaleY = 1000.0 / glCanvas.getHeight();
-                    double logicalX = e.getX() * scaleX;
-                    double logicalY = (glCanvas.getHeight() - e.getY()) * scaleY;
-                    renderer.registerClick(logicalX, logicalY);
+                    renderer.registerClickFromPhysical(e.getX(), e.getY(), glCanvas.getWidth(), glCanvas.getHeight());
                 }
+            }
+        });
+        
+        // Mouse tekerleği ile Zoom (Kamera)
+        glCanvas.addMouseWheelListener(new java.awt.event.MouseWheelListener() {
+            @Override
+            public void mouseWheelMoved(java.awt.event.MouseWheelEvent e) {
+                renderer.doZoom(e.getWheelRotation(), e.getX(), e.getY(), glCanvas.getWidth(), glCanvas.getHeight());
             }
         });
 

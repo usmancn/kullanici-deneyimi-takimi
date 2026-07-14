@@ -75,6 +75,11 @@ public final class RadarRenderer implements GLEventListener {
     private double clickX, clickY;
     
     private boolean pendingSpace = false;
+    
+    // Kamera (Zoom ve Pan) durumları
+    private double zoomLevel = 1.0;
+    private double cameraX = 0.0;
+    private double cameraY = 0.0;
 
     /**
      * Yeni bir radar renderer oluşturur.
@@ -96,16 +101,76 @@ public final class RadarRenderer implements GLEventListener {
         this.lastDisplayNanos = System.nanoTime();
     }
 
-    public void updateMousePosition(double logicalX, double logicalY, boolean visible) {
-        this.mouseLogicalX = logicalX;
-        this.mouseLogicalY = logicalY;
+    public void updateMousePositionFromPhysical(int px, int py, int w, int h, boolean visible) {
         this.showMouseCoords = visible;
+        if (!visible) return;
+        
+        float fx = (float) px / w;
+        float fy = (float) (h - py) / h; // Y ekseni tersine çevrilir
+        
+        double visibleWidth = config.getRadarWidth() / zoomLevel;
+        double visibleHeight = config.getRadarHeight() / zoomLevel;
+        
+        this.mouseLogicalX = cameraX + fx * visibleWidth;
+        this.mouseLogicalY = cameraY + fy * visibleHeight;
     }
 
-    public void registerClick(double logicalX, double logicalY) {
-        this.clickX = logicalX;
-        this.clickY = logicalY;
+    public void registerClickFromPhysical(int px, int py, int w, int h) {
+        float fx = (float) px / w;
+        float fy = (float) (h - py) / h;
+        
+        double visibleWidth = config.getRadarWidth() / zoomLevel;
+        double visibleHeight = config.getRadarHeight() / zoomLevel;
+        
+        this.clickX = cameraX + fx * visibleWidth;
+        this.clickY = cameraY + fy * visibleHeight;
         this.pendingClick = true;
+    }
+    
+    public void doZoom(int zoomDelta, int mousePx, int mousePy, int w, int h) {
+        // Zoom mantığı
+        double zoomFactor = 1.2;
+        double newZoomLevel = zoomLevel;
+        
+        if (zoomDelta < 0) { // İleri kaydırma (Yakınlaşma)
+            newZoomLevel *= zoomFactor;
+        } else if (zoomDelta > 0) { // Geri kaydırma (Uzaklaşma)
+            newZoomLevel /= zoomFactor;
+        }
+        
+        // Sınırları belirle [1.0, 5.0]
+        newZoomLevel = Math.max(1.0, Math.min(newZoomLevel, 5.0));
+        
+        if (newZoomLevel == zoomLevel) return; // Değişim yok
+        
+        // Fare konumunu koruma mantığı
+        float fx = (float) mousePx / w;
+        float fy = (float) (h - mousePy) / h;
+        
+        double oldVisibleWidth = config.getRadarWidth() / zoomLevel;
+        double oldVisibleHeight = config.getRadarHeight() / zoomLevel;
+        
+        double logicalMouseX = cameraX + fx * oldVisibleWidth;
+        double logicalMouseY = cameraY + fy * oldVisibleHeight;
+        
+        double newVisibleWidth = config.getRadarWidth() / newZoomLevel;
+        double newVisibleHeight = config.getRadarHeight() / newZoomLevel;
+        
+        // Farenin altında kalan noktanın yine farenin altında kalmasını sağla
+        double newCameraX = logicalMouseX - fx * newVisibleWidth;
+        double newCameraY = logicalMouseY - fy * newVisibleHeight;
+        
+        // Uzaklaşırken kenarlara çarpınca kamerayı dışarı taşırma (Clamping)
+        newCameraX = Math.max(0, Math.min(newCameraX, config.getRadarWidth() - newVisibleWidth));
+        newCameraY = Math.max(0, Math.min(newCameraY, config.getRadarHeight() - newVisibleHeight));
+        
+        this.zoomLevel = newZoomLevel;
+        this.cameraX = newCameraX;
+        this.cameraY = newCameraY;
+        
+        // Fare koordinatını da hemen güncelle
+        this.mouseLogicalX = logicalMouseX;
+        this.mouseLogicalY = logicalMouseY;
     }
 
     public void registerSpacePress() {
@@ -145,22 +210,9 @@ public final class RadarRenderer implements GLEventListener {
 
     @Override
     public void reshape(GLAutoDrawable drawable, int x, int y, int width, int height) {
-        GL2 gl = drawable.getGL().getGL2();
-
         this.viewportW = width;
         this.viewportH = height;
-
-        gl.glViewport(0, 0, width, height);
-
-        // Projeksiyon: Mantıksal simülasyon alanı HER ZAMAN config'deki boyuttadır (1000x1000).
-        // glViewport tüm pencereyi kapladığı için, 1000x1000'lik bu alan
-        // ekranın tamamına esnetilir. Böylece koordinatlar hep 1000 üzerinde kalır.
-        gl.glMatrixMode(GL2.GL_PROJECTION);
-        gl.glLoadIdentity();
-        gl.glOrtho(0, config.getRadarWidth(), 0, config.getRadarHeight(), -1.0, 1.0);
-
-        gl.glMatrixMode(GL2.GL_MODELVIEW);
-        gl.glLoadIdentity();
+        // Projection artık display() içinde zoom'a göre ayarlanıyor
     }
 
     @Override
@@ -177,6 +229,17 @@ public final class RadarRenderer implements GLEventListener {
 
         // Arka planı temizle
         gl.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT);
+
+        // --- ANA ÇİZİM (KAMERA İLE) ---
+        gl.glViewport(0, 0, viewportW, viewportH);
+        
+        gl.glMatrixMode(GL2.GL_PROJECTION);
+        gl.glLoadIdentity();
+        double visibleWidth = config.getRadarWidth() / zoomLevel;
+        double visibleHeight = config.getRadarHeight() / zoomLevel;
+        gl.glOrtho(cameraX, cameraX + visibleWidth, cameraY, cameraY + visibleHeight, -1.0, 1.0);
+        
+        gl.glMatrixMode(GL2.GL_MODELVIEW);
         gl.glLoadIdentity();
 
         // 1. Etkileşim İşleme (Tıklama ve Space)
@@ -200,8 +263,68 @@ public final class RadarRenderer implements GLEventListener {
         
         // 6. Fare koordinat göstergesi
         drawMouseCoords(gl);
+        
+        // --- MİNİMAP ÇİZİMİ ---
+        drawMinimap(gl, ctx);
 
         gl.glFlush();
+    }
+    
+    private void drawMinimap(GL2 gl, RenderContext ctx) {
+        int minimapSize = 200;
+        
+        // Sağ üst ya da sol üst, biz SOL ÜST yapacağız.
+        // glViewport'ta (0,0) sol alt köşedir. Sol üst için y = viewportH - minimapSize
+        gl.glViewport(0, viewportH - minimapSize, minimapSize, minimapSize);
+        
+        // Minimap projeksiyonu (Sürekli 0-1000'e sabit)
+        gl.glMatrixMode(GL2.GL_PROJECTION);
+        gl.glLoadIdentity();
+        gl.glOrtho(0, config.getRadarWidth(), 0, config.getRadarHeight(), -1.0, 1.0);
+        
+        gl.glMatrixMode(GL2.GL_MODELVIEW);
+        gl.glLoadIdentity();
+        
+        // Arka planı koyulaştır (Biraz şeffaf siyah)
+        gl.glColor4f(0.0f, 0.0f, 0.0f, 0.8f);
+        gl.glBegin(GL2.GL_QUADS);
+        gl.glVertex2f(0, 0);
+        gl.glVertex2f((float)config.getRadarWidth(), 0);
+        gl.glVertex2f((float)config.getRadarWidth(), (float)config.getRadarHeight());
+        gl.glVertex2f(0, (float)config.getRadarHeight());
+        gl.glEnd();
+        
+        // Sınır çizgisi
+        gl.glColor4f(1.0f, 1.0f, 1.0f, 0.5f);
+        gl.glLineWidth(2.0f);
+        gl.glBegin(GL2.GL_LINE_LOOP);
+        gl.glVertex2f(0, 0);
+        gl.glVertex2f((float)config.getRadarWidth(), 0);
+        gl.glVertex2f((float)config.getRadarWidth(), (float)config.getRadarHeight());
+        gl.glVertex2f(0, (float)config.getRadarHeight());
+        gl.glEnd();
+        gl.glLineWidth(1.0f);
+        
+        // Varlıkları çiz
+        for (ISimulationEntity entity : entityManager.getAll()) {
+            entity.render(gl, ctx); // Sweep efektleri dahil olmak üzere
+        }
+        
+        // Kameranın baktığı alanı (kadrajı) çiz (Beyaz Dikdörtgen)
+        float cx = (float) cameraX;
+        float cy = (float) cameraY;
+        float cw = (float) (config.getRadarWidth() / zoomLevel);
+        float ch = (float) (config.getRadarHeight() / zoomLevel);
+        
+        gl.glColor4f(1.0f, 1.0f, 1.0f, 0.9f); // Parlak beyaz
+        gl.glLineWidth(1.5f);
+        gl.glBegin(GL2.GL_LINE_LOOP);
+        gl.glVertex2f(cx, cy);
+        gl.glVertex2f(cx + cw, cy);
+        gl.glVertex2f(cx + cw, cy + ch);
+        gl.glVertex2f(cx, cy + ch);
+        gl.glEnd();
+        gl.glLineWidth(1.0f);
     }
 
     private void processInteractions() {
