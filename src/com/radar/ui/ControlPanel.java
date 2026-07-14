@@ -38,6 +38,8 @@ public final class ControlPanel extends JPanel {
 
     private final SimulationConfig  config;
     private final SimulationEngine  engine;
+    
+    private JLabel mouseCoordsLabel;
 
     /**
      * Yeni bir kontrol paneli oluşturur.
@@ -65,6 +67,22 @@ public final class ControlPanel extends JPanel {
         add(buildFadeFactorSlider());
         add(buildMinOpacitySlider());
         add(buildDebugModeCheckbox());
+
+        // Mouse koordinatları için alan
+        add(buildSectionTitle("İmleç Konumu"));
+        mouseCoordsLabel = new JLabel("X: 0, Y: 0", SwingConstants.LEFT);
+        mouseCoordsLabel.setForeground(new Color(200, 200, 215));
+        mouseCoordsLabel.setFont(mouseCoordsLabel.getFont().deriveFont(Font.BOLD, 12.0f));
+        add(mouseCoordsLabel);
+    }
+
+    /**
+     * Dışarıdan fare koordinatlarını güncellemek için kullanılır.
+     */
+    public void updateMouseCoords(int x, int y) {
+        if (mouseCoordsLabel != null) {
+            mouseCoordsLabel.setText(String.format("X: %d, Y: %d", x, y));
+        }
     }
 
     // -------------------------------------------------------------------------

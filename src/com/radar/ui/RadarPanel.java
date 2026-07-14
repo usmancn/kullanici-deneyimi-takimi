@@ -83,6 +83,20 @@ public final class RadarPanel extends JPanel {
         RadarRenderer renderer = new RadarRenderer(config, entityManager);
         glCanvas.addGLEventListener(renderer);
 
+        // Mouse takibi
+        glCanvas.addMouseMotionListener(new java.awt.event.MouseMotionAdapter() {
+            @Override
+            public void mouseMoved(java.awt.event.MouseEvent e) {
+                // OpenGL koordinat sisteminde Y=0 alttadır. Swing'de ise üstte.
+                int x = e.getX();
+                int y = glCanvas.getHeight() - e.getY();
+                
+                if (controlPanel != null) {
+                    controlPanel.updateMouseCoords(x, y);
+                }
+            }
+        });
+
         // Animatör
         this.animator = new FPSAnimator(glCanvas, TARGET_FPS, true);
 
