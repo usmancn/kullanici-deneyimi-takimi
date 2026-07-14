@@ -134,6 +134,13 @@ public final class SimulationConfig {
     /** Radar arka plan mavi kanalı. */
     private float bgColorB = 0.02f;
 
+    /**
+     * Sweep çizgisi uzaktayken bile gemilerin sahip olacağı minimum opaklık.
+     * 0.0 → tamamen söner; 1.0 → hiç sönmez.
+     * Önerilen: 0.10 – 0.20 arası (her zaman loş da olsa görünür).
+     */
+    private float minShipOpacity = 0.12f;
+
     // -------------------------------------------------------------------------
     // Debug
     // -------------------------------------------------------------------------
@@ -363,5 +370,16 @@ public final class SimulationConfig {
             throw new IllegalArgumentException("gridDivisions pozitif olmalidir: " + gridDivisions);
         }
         this.gridDivisions = gridDivisions;
+    }
+
+    public float getMinShipOpacity() {
+        return minShipOpacity;
+    }
+
+    public void setMinShipOpacity(float minShipOpacity) {
+        if (minShipOpacity < 0.0f || minShipOpacity > 1.0f) {
+            throw new IllegalArgumentException("minShipOpacity [0.0, 1.0] araliginda olmalidir: " + minShipOpacity);
+        }
+        this.minShipOpacity = minShipOpacity;
     }
 }

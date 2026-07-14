@@ -27,15 +27,14 @@ import java.awt.GridLayout;
  */
 public final class ControlPanel extends JPanel {
 
-    private static final int MIN_SHIP_COUNT  = 1;
-    private static final int MAX_SHIP_COUNT  = 100;
-    private static final int MIN_SIM_HZ      = 1;
-    private static final int MAX_SIM_HZ      = 120;
-    private static final int MIN_TRAIL_LEN   = 1;
-    private static final int MAX_TRAIL_LEN   = 100;
-    private static final float MIN_FADE      = 0.50f;
-    private static final float MAX_FADE      = 0.99f;
-    private static final int FADE_SLIDER_MAX = 100;
+    private static final int MIN_SHIP_COUNT   = 1;
+    private static final int MAX_SHIP_COUNT   = 100;
+    private static final int MIN_SIM_HZ       = 1;
+    private static final int MAX_SIM_HZ       = 120;
+    private static final int OPACITY_SLIDER_MAX = 100;
+    private static final float MIN_FADE       = 0.50f;
+    private static final float MAX_FADE       = 0.99f;
+    private static final int FADE_SLIDER_MAX  = 100;
 
     private final SimulationConfig  config;
     private final SimulationEngine  engine;
@@ -63,8 +62,8 @@ public final class ControlPanel extends JPanel {
         add(buildSectionTitle("Simülasyon Parametreleri"));
         add(buildShipCountSpinner());
         add(buildSimHzSpinner());
-        add(buildTrailLengthSpinner());
         add(buildFadeFactorSlider());
+        add(buildMinOpacitySlider());
         add(buildDebugModeCheckbox());
     }
 
@@ -104,18 +103,6 @@ public final class ControlPanel extends JPanel {
         return buildLabeledRow("Simülasyon Hz:", spinner);
     }
 
-    private JPanel buildTrailLengthSpinner() {
-        JSpinner spinner = new JSpinner(new SpinnerNumberModel(
-                config.getTrailLength(), MIN_TRAIL_LEN, MAX_TRAIL_LEN, 1
-        ));
-        styleSpinner(spinner);
-        spinner.addChangeListener(e -> {
-            int val = (Integer) spinner.getValue();
-            config.setTrailLength(val);
-        });
-        return buildLabeledRow("İz Uzunluğu:", spinner);
-    }
-
     private JPanel buildFadeFactorSlider() {
         // fadeFactor [0.50, 0.99] → slider [50, 99]
         int initialValue = (int) (config.getFadeFactor() * FADE_SLIDER_MAX);
@@ -139,7 +126,35 @@ public final class ControlPanel extends JPanel {
 
         JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         row.setBackground(new Color(14, 14, 20));
-        JLabel lbl = new JLabel("Sönükleşme (Fade):");
+        JLabel lbl = new JLabel("Sönükleme Mesafesi:");
+        lbl.setForeground(new Color(180, 180, 195));
+        lbl.setFont(lbl.getFont().deriveFont(11.0f));
+        row.add(lbl);
+        row.add(slider);
+        row.add(valueLabel);
+        return row;
+    }
+
+    private JPanel buildMinOpacitySlider() {
+        // minShipOpacity [0.0, 0.5] → slider [0, 50]
+        int initialValue = (int) (config.getMinShipOpacity() * OPACITY_SLIDER_MAX);
+        JSlider slider = new JSlider(0, 50, initialValue);
+        slider.setBackground(new Color(14, 14, 20));
+        slider.setForeground(new Color(200, 60, 60));
+
+        JLabel valueLabel = new JLabel(String.format("%.2f", config.getMinShipOpacity()));
+        valueLabel.setForeground(new Color(200, 200, 215));
+        valueLabel.setFont(valueLabel.getFont().deriveFont(11.0f));
+
+        slider.addChangeListener(e -> {
+            float val = slider.getValue() / (float) OPACITY_SLIDER_MAX;
+            config.setMinShipOpacity(val);
+            valueLabel.setText(String.format("%.2f", val));
+        });
+
+        JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        row.setBackground(new Color(14, 14, 20));
+        JLabel lbl = new JLabel("Min. Opaklık:");
         lbl.setForeground(new Color(180, 180, 195));
         lbl.setFont(lbl.getFont().deriveFont(11.0f));
         row.add(lbl);

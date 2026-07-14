@@ -12,32 +12,59 @@ import java.util.UUID;
 /**
  * Simülasyon sahnesindeki bir gemiyi temsil eder.
  *
- * <p><b>Hareket:</b> Sabit bir hız vektörüyle düz çizgi hareket eder.
- * Alan sınırlarına çarptığında ilgili eksen yönünde yansıma (reflection) yapar.</p>
+ * <p><b>Hareket:</b> Gemi sürekli hareket eder; simülasyon thread'i her tick'te
+ * pozisyonu günceller. Alan sınırlarına çarptığında yansıma yapar.</p>
  *
- * <p><b>Görünürlük (Sweep-tabanlı Fading):</b> Gemi, radar sweep çizgisi
- * üzerinden geçtiği anda tam parlak görünür. Sweep çizgisi uzaklaştıkça
- * (y ekseni boyunca yukarı çıktıkça) gemi, {@link SimulationConfig#getSweepFadeDistance()}
- * mesafesinde sıfır opaklığa düşer. Bu, gerçek radar ekranlarındaki fosfor
- * sönüklesmesi (phosphor decay) etkisini taklit eder.</p>
+ * <p><b>Klasik Radar Davranışı (Freeze-on-Sweep):</b><br>
+ * Gerçek radarlarda gemiler sürekli hareket eder, ancak radar ekranı yalnızca
+ * sweep çizgisinin o noktaya geçtiği andaki konumu gösterir. Bu sınıf bu davranışı
+ * taklit eder:
+ * <ol>
+ *   <li>Sweep çizgisi geminin üzerinden geçtiği anda {@code lastSeenPosition} güncellenir
+ *       (geminin o anki gerçek konumu kaydedilir).</li>
+ *   <li>Sonraki render'larda gemi, {@code lastSeenPosition}'da çizilir.</li>
+ *   <li>Sweep bir sonraki turda tekrar geçtiğinde konum yenilenir.</li>
+ * </ol>
+ * Bu yaklaşım, sweep döngüleri arasında geminin "yerinde donmuş" görünmesini sağlar;
+ * sonraki sweep ile birden yeni konuma atlayan görüntü gerçek radar ekranlarına
+ * özgü karakteristik görünümdür.
+ * </p>
  *
- * <p><b>Thread güvenliği:</b> {@code position} ve {@code velocity}
- * {@code volatile} olduğundan render thread'i güvenle okuyabilir.
- * Yazma yalnızca simülasyon thread'inden yapılır.</p>
+ * <p><b>Minimum Opaklık:</b> Sweep uzakta olsa bile gemi,
+ * {@link SimulationConfig#getMinShipOpacity()} değerinin altına düşmez.
+ * Bu sayede tüm gemiler her zaman loş da olsa görünür kalır;
+ * yalnızca sweep'e yakın olanlar daha parlak gösterilir.</p>
+ *
+ * <p><b>Thread güvenliği:</b><br>
+ * {@code position} ve {@code velocity} → {@code volatile}, her iki thread'den okunabilir.<br>
+ * {@code lastSeenPosition} ve {@code prevSweepY} → yalnızca JOGL render thread'inden
+ * erişilir ({@code render()} içinde), senkronizasyon gerekmez.</p>
  */
 public final class Ship implements ISimulationEntity {
 
     private final UUID id;
 
-    /** Mevcut pozisyon; simülasyon thread'i yazar, render thread'i okur. */
+    /** Gerçek anlık pozisyon; simülasyon thread'i yazar, render thread'i okur. */
     private volatile Vector2D position;
 
     /** Hız vektörü (piksel/saniye). */
     private volatile Vector2D velocity;
 
-    /** Geminin sahnede aktif olup olmadığı. */
-    private volatile boolean alive;
+    /**
+     * Sweep çizgisinin en son geçtiği andaki gemi konumu.
+     * Render thread'inde çizim bu pozisyona göre yapılır.
+     * Yalnızca render thread'inden erişilir.
+     */
+    private Vector2D lastSeenPosition;
 
+    /**
+     * Önceki render çağrısındaki sweep Y değeri.
+     * Sweep geçişini algılamak için kullanılır.
+     * Yalnızca render thread'inden erişilir; -1.0 = henüz başlatılmadı.
+     */
+    private double prevSweepY = -1.0;
+
+    private volatile boolean alive;
     private final SimulationConfig config;
 
     private static final Random RANDOM = new Random();
@@ -51,11 +78,12 @@ public final class Ship implements ISimulationEntity {
         if (config == null) {
             throw new IllegalArgumentException("SimulationConfig null olamaz.");
         }
-        this.config   = config;
-        this.id       = UUID.randomUUID();
-        this.alive    = true;
-        this.position = spawnRandomPosition();
-        this.velocity = spawnRandomVelocity();
+        this.config           = config;
+        this.id               = UUID.randomUUID();
+        this.alive            = true;
+        this.position         = spawnRandomPosition();
+        this.velocity         = spawnRandomVelocity();
+        this.lastSeenPosition = this.position; // ilk render'da görünür başlasın
     }
 
     // -------------------------------------------------------------------------
@@ -97,7 +125,6 @@ public final class Ship implements ISimulationEntity {
         double minY = 0.0;
         double maxY = config.getRadarHeight();
 
-        // Yatay sınır yansıması
         if (newPos.x < minX || newPos.x > maxX) {
             velocity = velocity.reflectX();
             newPos   = new Vector2D(
@@ -106,7 +133,6 @@ public final class Ship implements ISimulationEntity {
             );
         }
 
-        // Dikey sınır yansıması
         if (newPos.y < minY || newPos.y > maxY) {
             velocity = velocity.reflectY();
             newPos   = new Vector2D(
@@ -141,24 +167,43 @@ public final class Ship implements ISimulationEntity {
     // -------------------------------------------------------------------------
 
     /**
-     * Gemiyi sweep-tabanlı opaklıkla JOGL bağlamına çizer.
-     *
-     * <p>Opaklık hesabı: sweep çizgisi geminin hemen üstünden geçtiğinde
-     * {@code 1.0f} (tam parlak), sweep uzaklaştıkça {@code sweepFadeDistance}
-     * mesafesinde {@code 0.0f}'a düşer.</p>
+     * Klasik radar davranışıyla gemiyi çizer.
      *
      * <p>Yalnızca JOGL render thread'inden çağrılmalıdır.</p>
+     *
+     * <p>İşlem sırası:
+     * <ol>
+     *   <li>Sweep geçişi algılanır: eğer bu frame'de sweep çizgisi geminin
+     *       gerçek Y konumunun üzerinden geçtiyse {@code lastSeenPosition} güncellenir.</li>
+     *   <li>Opaklık, {@code lastSeenPosition.y} ile mevcut sweep pozisyonu
+     *       arasındaki farka göre hesaplanır.</li>
+     *   <li>Piramit şekli {@code lastSeenPosition}'a çizilir.</li>
+     * </ol>
+     * </p>
      */
     @Override
     public void render(GL2 gl, RenderContext ctx) {
-        float opacity = computeSweepOpacity(position.y, ctx.getSweepY());
-        if (opacity <= 0.01f) {
-            return; // Görünmez — çizme
-        }
+        double currentSweepY = ctx.getSweepY();
 
+        // ── 1. Sweep geçişini algıla ──────────────────────────────────────────
+        double actualShipY = position.y; // volatile okuma — thread-safe
+
+        if (prevSweepY >= 0.0) {
+            boolean normalCrossing = (prevSweepY < actualShipY && currentSweepY >= actualShipY);
+            if (normalCrossing) {
+                // Sweep bu frame'de geminin üzerinden geçti → konumu dondur
+                lastSeenPosition = position; // volatile okuma
+            }
+        }
+        prevSweepY = currentSweepY;
+
+        // ── 2. Opaklık hesabı (lastSeenPosition.y bazlı) ─────────────────────
+        float opacity = computeOpacity(lastSeenPosition.y, currentSweepY);
+
+        // ── 3. Çizim ─────────────────────────────────────────────────────────
         ShipRenderer.drawPyramidTop(
                 gl,
-                position,
+                lastSeenPosition,
                 opacity,
                 config.getShipSize(),
                 config.getShipColorR(),
@@ -168,32 +213,40 @@ public final class Ship implements ISimulationEntity {
     }
 
     // -------------------------------------------------------------------------
-    // Sweep Opaklık Hesabı (Private)
+    // Opaklık Hesabı (Private)
     // -------------------------------------------------------------------------
 
     /**
-     * Geminin sweep pozisyonuna göre opaklığını hesaplar.
+     * Sweep mesafesine göre opaklık hesaplar.
      *
      * <p>Formül:
      * <ul>
-     *   <li>{@code sweepY < shipY} → Sweep henüz bu gemiye ulaşmadı → {@code 0.0f}</li>
-     *   <li>{@code 0 ≤ distance ≤ fadeDistance} → Lineer sönükleme: {@code 1 - d/fd}</li>
-     *   <li>{@code distance > fadeDistance} → Tamamen sönük → {@code 0.0f}</li>
+     *   <li>Sweep, geminin üstünden yeni geçtiyse ({@code distance ≈ 0}) → {@code 1.0f}</li>
+     *   <li>Sweep {@code fadeDistance} kadar yukarıda ise → {@code minOpacity}</li>
+     *   <li>Sweep henüz geçmediyse ({@code distance < 0}) → {@code minOpacity}</li>
+     *   <li>Sweep çok uzaktaysa ({@code distance > fadeDistance}) → {@code minOpacity}</li>
      * </ul>
+     * Tüm durumlarda {@code minOpacity} tabanı korunur: gemi hiçbir zaman
+     * tamamen görünmez olmaz.
      * </p>
      *
-     * @param shipY  Geminin Y koordinatı.
-     * @param sweepY Sweep çizgisinin mevcut Y koordinatı.
-     * @return [0.0, 1.0] arasında opaklık değeri.
+     * @param lastSeenY Geminin son "dondurulmuş" Y konumu.
+     * @param sweepY    Sweep çizgisinin mevcut Y konumu.
+     * @return [minOpacity, 1.0] arasında opaklık değeri.
      */
-    private float computeSweepOpacity(double shipY, double sweepY) {
-        double distance     = sweepY - shipY;
+    private float computeOpacity(double lastSeenY, double sweepY) {
+        float minOpacity    = config.getMinShipOpacity();
+        double distance     = sweepY - lastSeenY;
         double fadeDistance = config.getSweepFadeDistance();
 
         if (distance < 0.0 || distance > fadeDistance) {
-            return 0.0f;
+            // Sweep henüz geçmedi ya da çok geride → minimum görünürlük
+            return minOpacity;
         }
-        return (float) (1.0 - (distance / fadeDistance));
+
+        // Lineer interpolasyon: distance=0 → 1.0f, distance=fadeDistance → minOpacity
+        float t = (float) (distance / fadeDistance);
+        return minOpacity + (1.0f - minOpacity) * (1.0f - t);
     }
 
     // -------------------------------------------------------------------------
