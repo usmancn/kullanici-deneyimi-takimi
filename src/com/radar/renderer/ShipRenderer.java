@@ -6,10 +6,17 @@ import com.radar.model.Vector2D;
 /**
  * JOGL bağlamında gemi simgesi çizim yardımcı sınıfı.
  *
- * <p>Bu sınıf tamamen <b>statik</b> metotlardan oluşur; örneklenemez.
- * Gemi görsel temsili olarak küçük dolu bir kare ve etrafında hafif
- * bir ışıma (glow) efekti kullanılır — bu, gerçek radar ekranlarındaki
- * fosfor parlaması etkisini taklit eder.</p>
+ * <p>Gemi görsel temsili olarak <b>tepeden bakış açısıyla piramit</b> kullanılır.
+ * Piramit merkezden (tepe nokta) 4 köşeye uzanan 4 üçgenden oluşur:
+ * <ul>
+ *   <li>Merkez vertex → tam parlak (opacity = parametre değeri)</li>
+ *   <li>Köşe vertexler → tamamen şeffaf (opacity = 0.0)</li>
+ * </ul>
+ * Bu yapı klasik radar ekranlarındaki fosfor parlamasını taklit eder;
+ * sweep geçtikten sonra tüm piramit birlikte sönüklenir.</p>
+ *
+ * <p>Anti-aliasing için {@link com.jogamp.opengl.GL2#GL_POLYGON_SMOOTH} ve
+ * {@code GL_BLEND} etkin olmalıdır (bkz. {@link RadarRenderer#init}).</p>
  *
  * <p><b>Thread güvenliği:</b> Tüm metotlar yalnızca JOGL render thread'inden
  * (GLEventListener#display içinden) çağrılmalıdır.</p>
@@ -22,56 +29,87 @@ public final class ShipRenderer {
     }
 
     /**
-     * Belirtilen pozisyona sweep-tabanlı opaklıkla dolu kare çizer.
+     * Belirtilen merkez noktasına, tepeden bakılan piramit şeklini çizer.
      *
-     * <p>İki katmanlı çizim yapılır:
-     * <ol>
-     *   <li><b>Glow katmanı</b>: Karenin 2.5 katı büyüklükte yarı saydam hale,
-     *       fosfor parlaması etkisi verir.</li>
-     *   <li><b>Çekirdek kare</b>: Tam dolu, keskin kenarlı kare.</li>
-     * </ol>
-     * </p>
+     * <p>4 üçgenden oluşur (alt, sağ, üst, sol):
+     * <pre>
+     *        Sol-Üst ------- Sağ-Üst
+     *           |  \       /  |
+     *           |    Merkez   |
+     *           |  /       \  |
+     *        Sol-Alt ------- Sağ-Alt
+     * </pre>
+     * Her üçgenin merkez köşesi {@code opacity} değerinde, kenar köşeleri
+     * sıfır opaklıkta çizilir.</p>
      *
-     * @param gl      Aktif GL2 bağlamı.
-     * @param center  Karenin merkez koordinatı.
-     * @param opacity Bu karenin opaklık değeri [0.0, 1.0].
-     * @param size    Karenin piksel cinsinden kenar uzunluğu.
+     * @param gl      Aktif GL2 bağlamı; null olamaz.
+     * @param center  Piramidin merkez (tepe) koordinatı.
+     * @param opacity Merkez noktanın opaklığı [0.0, 1.0]; sweep tarafından hesaplanır.
+     * @param size    Piramidin kenar uzunluğu (piksel). Her iki yönde bu değer kullanılır.
      * @param r       Kırmızı kanal [0.0, 1.0].
      * @param g       Yeşil kanal [0.0, 1.0].
      * @param b       Mavi kanal [0.0, 1.0].
      */
-    public static void drawSquare(GL2 gl,
-                                  Vector2D center,
-                                  float opacity,
-                                  int size,
-                                  float r,
-                                  float g,
-                                  float b) {
+    public static void drawPyramidTop(GL2 gl,
+                                      Vector2D center,
+                                      float opacity,
+                                      int size,
+                                      float r,
+                                      float g,
+                                      float b) {
         if (opacity <= 0.01f) {
-            return; // Görünmez nokta çizme
+            return; // Görünmez — OpenGL çağrısı yapma
         }
 
         float cx   = (float) center.x;
         float cy   = (float) center.y;
         float half = size / 2.0f;
 
-        // --- Glow katmanı (2.5× büyüklükte, düşük alfa) ---
-        float glowHalf = half * 2.5f;
-        gl.glBegin(GL2.GL_QUADS);
-        gl.glColor4f(r, g, b, opacity * 0.20f);
-        gl.glVertex2f(cx - glowHalf, cy - glowHalf);
-        gl.glVertex2f(cx + glowHalf, cy - glowHalf);
-        gl.glVertex2f(cx + glowHalf, cy + glowHalf);
-        gl.glVertex2f(cx - glowHalf, cy + glowHalf);
-        gl.glEnd();
+        // Dört köşe koordinatları
+        float leftX   = cx - half;
+        float rightX  = cx + half;
+        float bottomY = cy - half;
+        float topY    = cy + half;
 
-        // --- Çekirdek kare (tam opak, küçük) ---
-        gl.glBegin(GL2.GL_QUADS);
-        gl.glColor4f(r, g, b, clampAlpha(opacity));
-        gl.glVertex2f(cx - half, cy - half);
-        gl.glVertex2f(cx + half, cy - half);
-        gl.glVertex2f(cx + half, cy + half);
-        gl.glVertex2f(cx - half, cy + half);
+        float clampedOpacity = clampAlpha(opacity);
+
+        gl.glBegin(GL2.GL_TRIANGLES);
+
+        // ── Üçgen 1: ALT ──────────────────────────────────
+        // Merkez (parlak)
+        gl.glColor4f(r, g, b, clampedOpacity);
+        gl.glVertex2f(cx, cy);
+        // Sol-alt köşe (şeffaf)
+        gl.glColor4f(r, g, b, 0.0f);
+        gl.glVertex2f(leftX, bottomY);
+        // Sağ-alt köşe (şeffaf)
+        gl.glColor4f(r, g, b, 0.0f);
+        gl.glVertex2f(rightX, bottomY);
+
+        // ── Üçgen 2: SAĞ ──────────────────────────────────
+        gl.glColor4f(r, g, b, clampedOpacity);
+        gl.glVertex2f(cx, cy);
+        gl.glColor4f(r, g, b, 0.0f);
+        gl.glVertex2f(rightX, bottomY);
+        gl.glColor4f(r, g, b, 0.0f);
+        gl.glVertex2f(rightX, topY);
+
+        // ── Üçgen 3: ÜST ──────────────────────────────────
+        gl.glColor4f(r, g, b, clampedOpacity);
+        gl.glVertex2f(cx, cy);
+        gl.glColor4f(r, g, b, 0.0f);
+        gl.glVertex2f(rightX, topY);
+        gl.glColor4f(r, g, b, 0.0f);
+        gl.glVertex2f(leftX, topY);
+
+        // ── Üçgen 4: SOL ──────────────────────────────────
+        gl.glColor4f(r, g, b, clampedOpacity);
+        gl.glVertex2f(cx, cy);
+        gl.glColor4f(r, g, b, 0.0f);
+        gl.glVertex2f(leftX, topY);
+        gl.glColor4f(r, g, b, 0.0f);
+        gl.glVertex2f(leftX, bottomY);
+
         gl.glEnd();
     }
 

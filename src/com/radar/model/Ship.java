@@ -156,7 +156,7 @@ public final class Ship implements ISimulationEntity {
             return; // Görünmez — çizme
         }
 
-        ShipRenderer.drawSquare(
+        ShipRenderer.drawPyramidTop(
                 gl,
                 position,
                 opacity,
