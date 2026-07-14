@@ -217,12 +217,14 @@ public final class RadarRenderer implements GLEventListener {
 
     @Override
     public void display(GLAutoDrawable drawable) {
+        long frameStartNanos = System.nanoTime();
+        
         GL2 gl = drawable.getGL().getGL2();
 
         // Delta-time hesabı
-        long nowNanos  = System.nanoTime();
-        double deltaSec = (nowNanos - lastDisplayNanos) / 1_000_000_000.0;
-        lastDisplayNanos = nowNanos;
+        double deltaSec = (frameStartNanos - lastDisplayNanos) / 1_000_000_000.0;
+        long frameIntervalNanos = frameStartNanos - lastDisplayNanos;
+        lastDisplayNanos = frameStartNanos;
 
         // Sweep çizgisini ilerlet
         advanceSweep(deltaSec);
@@ -268,10 +270,17 @@ public final class RadarRenderer implements GLEventListener {
         drawMinimap(gl, ctx);
 
         gl.glFlush();
+        
+        // Gerçek GPU/Render Kullanımını Bildir
+        long frameEndNanos = System.nanoTime();
+        long renderTimeNanos = frameEndNanos - frameStartNanos;
+        com.radar.metrics.GpuMetricsProvider.reportRenderTime(renderTimeNanos, frameIntervalNanos);
     }
     
     private void drawMinimap(GL2 gl, RenderContext ctx) {
-        int minimapSize = 200;
+        // Radar mantıksal olarak 1000x1000 ve grid aralığı 250 (4 parça)
+        // Sol üstteki tek bir grid karesine tam oturması için viewportW / 4 alıyoruz.
+        int minimapSize = viewportW / 4; 
         
         // Sağ üst ya da sol üst, biz SOL ÜST yapacağız.
         // glViewport'ta (0,0) sol alt köşedir. Sol üst için y = viewportH - minimapSize
@@ -285,8 +294,8 @@ public final class RadarRenderer implements GLEventListener {
         gl.glMatrixMode(GL2.GL_MODELVIEW);
         gl.glLoadIdentity();
         
-        // Arka planı koyulaştır (Biraz şeffaf siyah)
-        gl.glColor4f(0.0f, 0.0f, 0.0f, 0.8f);
+        // Arka plan: Siyah yerine, radarın kendi arka plan renginin biraz daha koyusu
+        gl.glColor4f(config.getBgColorR() * 0.6f, config.getBgColorG() * 0.6f, config.getBgColorB() * 0.6f, 0.95f);
         gl.glBegin(GL2.GL_QUADS);
         gl.glVertex2f(0, 0);
         gl.glVertex2f((float)config.getRadarWidth(), 0);
@@ -294,9 +303,9 @@ public final class RadarRenderer implements GLEventListener {
         gl.glVertex2f(0, (float)config.getRadarHeight());
         gl.glEnd();
         
-        // Sınır çizgisi
-        gl.glColor4f(1.0f, 1.0f, 1.0f, 0.5f);
-        gl.glLineWidth(2.0f);
+        // Sınır çizgisi: Grid rengiyle aynı olsun ki tam bir kare gibi dursun
+        gl.glColor4f(GRID_COLOR[0], GRID_COLOR[1], GRID_COLOR[2], 1.0f);
+        gl.glLineWidth(1.5f);
         gl.glBegin(GL2.GL_LINE_LOOP);
         gl.glVertex2f(0, 0);
         gl.glVertex2f((float)config.getRadarWidth(), 0);
