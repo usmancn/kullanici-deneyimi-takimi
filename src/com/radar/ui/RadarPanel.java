@@ -245,11 +245,11 @@ public final class RadarPanel extends JPanel {
         layered.add(glCanvas, JLayeredPane.DEFAULT_LAYER);
 
         // Debug overlay (PALETTE_LAYER → GLCanvas'ın üstünde)
-        if (cfg.isDebugMode()) {
-            debugLabel = buildDebugLabel();
-            layered.add(debugLabel, JLayeredPane.PALETTE_LAYER);
-            startDebugTimer();
-        }
+        // Debug overlay (PALETTE_LAYER → GLCanvas'ın üstünde)
+        debugLabel = buildDebugLabel();
+        debugLabel.setVisible(cfg.isDebugMode());
+        layered.add(debugLabel, JLayeredPane.PALETTE_LAYER);
+        startDebugTimer();
 
         return layered;
     }
@@ -276,6 +276,14 @@ public final class RadarPanel extends JPanel {
         if (debugLabel == null) {
             return;
         }
+        
+        boolean isDebug = config.isDebugMode();
+        if (debugLabel.isVisible() != isDebug) {
+            debugLabel.setVisible(isDebug);
+        }
+        
+        if (!isDebug) return;
+
         int entityCount = entityManager.getEntityCount();
         double fps      = animator.getLastFPS();
         String text = String.format(
