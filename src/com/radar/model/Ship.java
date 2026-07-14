@@ -50,12 +50,19 @@ public final class Ship implements ISimulationEntity {
     /** Hız vektörü (piksel/saniye). */
     private volatile Vector2D velocity;
 
-    /**
-     * Sweep çizgisinin en son geçtiği andaki gemi konumu.
-     * Render thread'inde çizim bu pozisyona göre yapılır.
-     * Yalnızca render thread'inden erişilir.
-     */
-    private Vector2D lastSeenPosition;
+    private static class Blip {
+        final Vector2D position;
+        final double spawnTravel;
+
+        Blip(Vector2D position, double spawnTravel) {
+            this.position = position;
+            this.spawnTravel = spawnTravel;
+        }
+    }
+
+    private final java.util.LinkedList<Blip> blips = new java.util.LinkedList<>();
+    private double totalSweepTravel = 0.0;
+    private double prevActualShipY = -1.0;
 
     /**
      * Önceki render çağrısındaki sweep Y değeri.
@@ -75,11 +82,6 @@ public final class Ship implements ISimulationEntity {
 
     private static final Random RANDOM = new Random();
 
-    /**
-     * Verilen konfigürasyona göre rastgele pozisyon ve hızla yeni bir gemi oluşturur.
-     *
-     * @param config Simülasyon konfigürasyonu; null olamaz.
-     */
     public Ship(SimulationConfig config) {
         if (config == null) {
             throw new IllegalArgumentException("SimulationConfig null olamaz.");
@@ -89,7 +91,6 @@ public final class Ship implements ISimulationEntity {
         this.alive            = true;
         this.position         = spawnRandomPosition();
         this.velocity         = spawnRandomVelocity();
-        this.lastSeenPosition = this.position; // ilk render'da görünür başlasın
     }
 
     // -------------------------------------------------------------------------
@@ -110,9 +111,6 @@ public final class Ship implements ISimulationEntity {
     // IUpdateable
     // -------------------------------------------------------------------------
 
-    /**
-     * Gemiyi hareket ettirir. Yalnızca simülasyon thread'inden çağrılmalıdır.
-     */
     @Override
     public void update(double deltaTime) {
         move(deltaTime);
@@ -172,105 +170,96 @@ public final class Ship implements ISimulationEntity {
     // IRenderable
     // -------------------------------------------------------------------------
 
-    /**
-     * Klasik radar davranışıyla gemiyi çizer.
-     *
-     * <p>Yalnızca JOGL render thread'inden çağrılmalıdır.</p>
-     *
-     * <p>İşlem sırası:
-     * <ol>
-     *   <li>Sweep geçişi algılanır: eğer bu frame'de sweep çizgisi geminin
-     *       gerçek Y konumunun üzerinden geçtiyse {@code lastSeenPosition} güncellenir.</li>
-     *   <li>Opaklık, {@code lastSeenPosition.y} ile mevcut sweep pozisyonu
-     *       arasındaki farka göre hesaplanır.</li>
-     *   <li>Piramit şekli {@code lastSeenPosition}'a çizilir.</li>
-     * </ol>
-     * </p>
-     */
     @Override
     public void render(GL2 gl, RenderContext ctx) {
         double currentSweepY = ctx.getSweepY();
-        double actualShipY = position.y; // volatile okuma — thread-safe
+        double actualShipY = position.y; // volatile okuma
 
-        // ── 1. Sweep geçişini algıla ──────────────────────────────────────────
-        if (prevSweepY >= 0.0) {
+        if (prevSweepY >= 0.0 && prevActualShipY >= 0.0) {
+            double travel = currentSweepY - prevSweepY;
+            if (travel < 0.0) {
+                travel += config.getRadarHeight(); // wrap-around
+            }
+            totalSweepTravel += travel;
+
             boolean crossed = false;
-            
-            if (currentSweepY >= prevSweepY) {
-                // Sweep normal şekilde yukarı çıkıyor
-                if (actualShipY >= prevSweepY && actualShipY <= currentSweepY) {
+            boolean sweepNormal = currentSweepY >= prevSweepY;
+            boolean shipNormal = Math.abs(actualShipY - prevActualShipY) < 50.0; // sekme yok
+
+            if (sweepNormal && shipNormal) {
+                // Continuous collision detection
+                double prevDiff = prevActualShipY - prevSweepY;
+                double currDiff = actualShipY - currentSweepY;
+                if (prevDiff * currDiff <= 0.0) {
+                    crossed = true;
+                }
+            } else if (!sweepNormal) {
+                // Sweep wrap-around
+                if (actualShipY >= prevSweepY || actualShipY <= currentSweepY) {
                     crossed = true;
                 }
             } else {
-                // Sweep resetlenmiş (üstten alta atlamış)
-                if (actualShipY >= prevSweepY || actualShipY <= currentSweepY) {
+                // Gemi yansıması (bounce)
+                if (actualShipY >= prevSweepY && actualShipY <= currentSweepY) {
                     crossed = true;
                 }
             }
 
             if (crossed) {
-                lastSeenPosition = position; // volatile okuma
-                hasBeenSwept = true;         // Gemi artık görünür
+                blips.add(new Blip(position, totalSweepTravel));
+                hasBeenSwept = true;
             }
         }
         prevSweepY = currentSweepY;
+        prevActualShipY = actualShipY;
 
-        // Henüz hiç taranmadıysa çizme (tamamen görünmez)
-        if (!hasBeenSwept) {
+        if (!hasBeenSwept || blips.isEmpty()) {
             return;
         }
 
-        // ── 2. Opaklık hesabı (lastSeenPosition.y bazlı) ─────────────────────
-        float opacity = computeOpacity(lastSeenPosition.y, currentSweepY);
+        // Blipleri güncelle ve çiz
+        java.util.Iterator<Blip> iter = blips.iterator();
+        while (iter.hasNext()) {
+            Blip b = iter.next();
+            double age = totalSweepTravel - b.spawnTravel;
+            
+            // Eğer üzerinden 1 tam tur (radar boyu) geçtiyse bu eski izi sil
+            if (age > config.getRadarHeight()) {
+                if (blips.size() > 1) {
+                    iter.remove();
+                    continue;
+                } else {
+                    // Son blip ise silme, tamamen sönük (minOpacity) kalsın
+                    age = config.getRadarHeight();
+                }
+            }
 
-        // ── 3. Çizim ─────────────────────────────────────────────────────────
-        ShipRenderer.drawPyramidTop(
-                gl,
-                lastSeenPosition,
-                opacity,
-                config.getShipSize(),
-                config.getShipColorR(),
-                config.getShipColorG(),
-                config.getShipColorB()
-        );
+            float opacity = computeOpacity(age);
+            ShipRenderer.drawPyramidTop(
+                    gl,
+                    b.position,
+                    opacity,
+                    config.getShipSize(),
+                    config.getShipColorR(),
+                    config.getShipColorG(),
+                    config.getShipColorB()
+            );
+        }
     }
 
     // -------------------------------------------------------------------------
     // Opaklık Hesabı (Private)
     // -------------------------------------------------------------------------
 
-    /**
-     * Sweep mesafesine göre opaklık hesaplar.
-     *
-     * <p>Formül (sweep geçtikten sonra):
-     * <ul>
-     *   <li>Hemen geçtikten sonra (distance ≈ 0) → {@code 1.0f} (tam parlak)</li>
-     *   <li>Sweep {@code fadeDistance} kadar yukarıda → {@code minOpacity} (en loş)</li>
-     *   <li>Sweep henüz geçmedi ya da çok uzakta → {@code minOpacity} (loş ama görünür)</li>
-     * </ul>
-     * Gemi asla tamamen kaybolmaz — {@code minOpacity} tabanı her zaman korunur.
-     * </p>
-     */
-    private float computeOpacity(double lastSeenY, double sweepY) {
+    private float computeOpacity(double age) {
         float minOpacity    = config.getMinShipOpacity();
         double fadeDistance = config.getSweepFadeDistance();
         
-        // Sweep'in gemiden ne kadar uzaklaştığını hesapla.
-        // Eğer sweepY < lastSeenY ise (örneğin sweep en tepeye çarpıp 0'a döndüyse),
-        // aradaki mesafeyi radar yüksekliğini ekleyerek buluruz (wrap-around).
-        double distance = sweepY - lastSeenY;
-        if (distance < 0.0) {
-            distance += config.getRadarHeight();
-        }
-
-        // Eğer sweep çok uzaktaysa → minimum görünürlük
-        if (distance > fadeDistance) {
+        if (age >= fadeDistance) {
             return minOpacity;
         }
 
-        // Yumuşak (kübik ease-out) sönüm: distance=0 → 1.0, distance=fadeDistance → minOpacity
-        float t = (float) (distance / fadeDistance);
-        // ease-out: 1 - t^2 (karesel, lineer'den daha yavaş solar)
+        float t = (float) (age / fadeDistance);
         float eased = 1.0f - (t * t);
         return minOpacity + (1.0f - minOpacity) * eased;
     }
