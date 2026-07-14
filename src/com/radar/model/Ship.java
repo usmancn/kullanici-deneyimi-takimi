@@ -64,6 +64,12 @@ public final class Ship implements ISimulationEntity {
      */
     private double prevSweepY = -1.0;
 
+    /**
+     * Gemi henüz radar (sweep) tarafından hiç taranmadıysa görünmez olmalıdır.
+     * İlk geçişte true olur.
+     */
+    private boolean hasBeenSwept = false;
+
     private volatile boolean alive;
     private final SimulationConfig config;
 
@@ -184,18 +190,35 @@ public final class Ship implements ISimulationEntity {
     @Override
     public void render(GL2 gl, RenderContext ctx) {
         double currentSweepY = ctx.getSweepY();
-
-        // ── 1. Sweep geçişini algıla ──────────────────────────────────────────
         double actualShipY = position.y; // volatile okuma — thread-safe
 
+        // ── 1. Sweep geçişini algıla ──────────────────────────────────────────
         if (prevSweepY >= 0.0) {
-            boolean normalCrossing = (prevSweepY < actualShipY && currentSweepY >= actualShipY);
-            if (normalCrossing) {
-                // Sweep bu frame'de geminin üzerinden geçti → konumu dondur
+            boolean crossed = false;
+            
+            if (currentSweepY >= prevSweepY) {
+                // Sweep normal şekilde yukarı çıkıyor
+                if (actualShipY >= prevSweepY && actualShipY <= currentSweepY) {
+                    crossed = true;
+                }
+            } else {
+                // Sweep resetlenmiş (üstten alta atlamış)
+                if (actualShipY >= prevSweepY || actualShipY <= currentSweepY) {
+                    crossed = true;
+                }
+            }
+
+            if (crossed) {
                 lastSeenPosition = position; // volatile okuma
+                hasBeenSwept = true;         // Gemi artık görünür
             }
         }
         prevSweepY = currentSweepY;
+
+        // Henüz hiç taranmadıysa çizme (tamamen görünmez)
+        if (!hasBeenSwept) {
+            return;
+        }
 
         // ── 2. Opaklık hesabı (lastSeenPosition.y bazlı) ─────────────────────
         float opacity = computeOpacity(lastSeenPosition.y, currentSweepY);

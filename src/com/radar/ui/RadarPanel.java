@@ -2,7 +2,7 @@ package com.radar.ui;
 
 import com.jogamp.opengl.GLCapabilities;
 import com.jogamp.opengl.GLProfile;
-import com.jogamp.opengl.awt.GLCanvas;
+import com.jogamp.opengl.awt.GLJPanel;
 import com.jogamp.opengl.util.FPSAnimator;
 import com.radar.config.SimulationConfig;
 import com.radar.engine.EntityManager;
@@ -20,15 +20,13 @@ import java.awt.Dimension;
 import java.awt.Font;
 
 /**
- * JOGL {@link GLCanvas}'ı barındıran ve animasyonu yöneten Swing paneli.
+ * JOGL {@link GLJPanel}'ı barındıran ve animasyonu yöneten Swing paneli.
  *
- * <p>Bu panel {@link MainFrame}'deki "Radar" sekmesine yerleştirilir.
- * GLCanvas (AWT bileşeni) lightweight Swing bileşenlerinin üstünde render
- * olduğundan, sekme değiştirme sırasında animator durdurulup başlatılır
- * (z-order çakışmasını önlemek için).</p>
+ * <p>GLJPanel, Swing (lightweight) bileşeni olduğu için Windows'ta AWT (heavyweight)
+ * bileşenlerin yaşadığı boyutlandırma (layout) sorunlarını yaşamaz, tam olarak sığar.</p>
  *
  * <p><b>Debug modu:</b> {@link SimulationConfig#isDebugMode()} aktifse
- * GLCanvas'ın sol üst köşesinde FPS ve varlık sayısı overlay'i gösterilir.</p>
+ * GLJPanel'ın sol üst köşesinde FPS ve varlık sayısı overlay'i gösterilir.</p>
  */
 public final class RadarPanel extends JPanel {
 
@@ -38,7 +36,7 @@ public final class RadarPanel extends JPanel {
     /** Debug overlay güncelleme aralığı (ms). */
     private static final int DEBUG_UPDATE_INTERVAL_MS = 500;
 
-    private final GLCanvas       glCanvas;
+    private final GLJPanel       glCanvas;
     private final FPSAnimator    animator;
     private final ControlPanel   controlPanel;
     private final SimulationConfig config;
@@ -74,8 +72,8 @@ public final class RadarPanel extends JPanel {
         capabilities.setSampleBuffers(true);
         capabilities.setNumSamples(4);     // MSAA x4
 
-        // GLCanvas oluşturma — preferred size SABIT değil, layout manager doldurur
-        this.glCanvas = new GLCanvas(capabilities);
+        // GLJPanel oluşturma
+        this.glCanvas = new GLJPanel(capabilities);
         // Minimum kullanılabilir boyut; daha büyük pencerede tam dolar
         this.glCanvas.setMinimumSize(new Dimension(400, 400));
 
