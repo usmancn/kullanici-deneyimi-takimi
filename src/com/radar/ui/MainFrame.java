@@ -43,7 +43,7 @@ public final class MainFrame extends JFrame {
     private static final String TAB_GPU   = "GPU";
 
     private static final int WINDOW_WIDTH  = 1280;
-    private static final int WINDOW_HEIGHT = 780;
+    private static final int WINDOW_HEIGHT = 1060;
 
     private final RadarPanel    radarPanel;
     private final MetricsPanel  cpuPanel;

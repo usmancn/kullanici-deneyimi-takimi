@@ -72,10 +72,12 @@ public final class RadarPanel extends JPanel {
         capabilities.setSampleBuffers(true);
         capabilities.setNumSamples(4);     // MSAA x4
 
-        // GLJPanel oluşturma
+        // GLJPanel oluşturma (Boyutunu kesin olarak 1000x1000'e sabitliyoruz)
         this.glCanvas = new GLJPanel(capabilities);
-        // Minimum kullanılabilir boyut; daha büyük pencerede tam dolar
-        this.glCanvas.setMinimumSize(new Dimension(400, 400));
+        Dimension radarSize = new Dimension(config.getRadarWidth(), config.getRadarHeight());
+        this.glCanvas.setPreferredSize(radarSize);
+        this.glCanvas.setMinimumSize(radarSize);
+        this.glCanvas.setMaximumSize(radarSize);
 
         // Renderer bağlama
         RadarRenderer renderer = new RadarRenderer(config, entityManager);
@@ -88,9 +90,13 @@ public final class RadarPanel extends JPanel {
         this.controlPanel = new ControlPanel(config, engine);
         this.controlPanel.setPreferredSize(new Dimension(220, 0));
 
-        // JLayeredPane, AWT GLCanvas ile Windows'ta boyutlandırma sorunlarına (reshape tetiklememe)
-        // yol açabiliyor. Bu yüzden doğrudan BorderLayout.CENTER'a ekliyoruz.
-        add(glCanvas,     BorderLayout.CENTER);
+        // Radar panelinin ekrana sündürülmesini engellemek için, onu saran ve tam ortaya hizalayan
+        // bir GridBagLayout wrapper kullanıyoruz. Böylece "gerçekten 1000x1000 piksel" kalacak.
+        JPanel canvasWrapper = new JPanel(new java.awt.GridBagLayout());
+        canvasWrapper.setBackground(new Color(8, 8, 12));
+        canvasWrapper.add(glCanvas);
+
+        add(canvasWrapper,    BorderLayout.CENTER);
         add(controlPanel, BorderLayout.EAST);
     }
 
