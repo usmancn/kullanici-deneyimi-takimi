@@ -72,12 +72,12 @@ public final class RadarPanel extends JPanel {
         capabilities.setSampleBuffers(true);
         capabilities.setNumSamples(4);     // MSAA x4
 
-        // GLJPanel oluşturma (Boyutunu kesin olarak 1000x1000'e sabitliyoruz)
+        // GLJPanel oluşturma
         this.glCanvas = new GLJPanel(capabilities);
-        Dimension radarSize = new Dimension(config.getRadarWidth(), config.getRadarHeight());
-        this.glCanvas.setPreferredSize(radarSize);
-        this.glCanvas.setMinimumSize(radarSize);
-        this.glCanvas.setMaximumSize(radarSize);
+        Dimension radarSize = new Dimension(config.getRadarWidth(), config.getRadarHeight()); // 1000x1000
+        this.glCanvas.setPreferredSize(radarSize); // Mümkünse 1000x1000 açılmaya çalışsın
+        // Minimum size'ı küçük tutalım ki Windows DPI ölçeklemesinden dolayı ekran daralırsa panel de küçülebilsin
+        this.glCanvas.setMinimumSize(new Dimension(200, 200));
 
         // Renderer bağlama
         RadarRenderer renderer = new RadarRenderer(config, entityManager);
@@ -88,12 +88,16 @@ public final class RadarPanel extends JPanel {
             @Override
             public void mouseMoved(java.awt.event.MouseEvent e) {
                 // OpenGL koordinat sisteminde Y=0 alttadır. Swing'de ise üstte.
-                // glCanvas tam olarak 1000x1000 olduğu için doğrudan map edebiliriz.
-                int x = e.getX();
-                int y = glCanvas.getHeight() - e.getY();
+                // GLCanvas ekrana sığmak için küçülmüş olsa bile, mantıksal simülasyon hep 1000x1000'dir.
+                // Bu yüzden farenin bulunduğu fiziksel konumu, 1000x1000 mantıksal sisteme oranlıyoruz.
+                double scaleX = 1000.0 / glCanvas.getWidth();
+                double scaleY = 1000.0 / glCanvas.getHeight();
+                
+                int logicalX = (int) (e.getX() * scaleX);
+                int logicalY = (int) ((glCanvas.getHeight() - e.getY()) * scaleY);
                 
                 if (controlPanel != null) {
-                    controlPanel.updateMouseCoords(x, y);
+                    controlPanel.updateMouseCoords(logicalX, logicalY);
                 }
             }
         });
@@ -105,9 +109,19 @@ public final class RadarPanel extends JPanel {
         this.controlPanel = new ControlPanel(config, engine);
         this.controlPanel.setPreferredSize(new Dimension(220, 0));
 
-        // Radar panelinin ekrana sündürülmesini engellemek için, onu saran ve tam ortaya hizalayan
-        // bir GridBagLayout wrapper kullanıyoruz. Böylece "gerçekten 1000x1000 piksel" kalacak.
-        JPanel canvasWrapper = new JPanel(new java.awt.GridBagLayout());
+        // Radar panelinin ekrana sündürülmesini engellemek için, tam kare kalmasını (1:1 aspect ratio)
+        // sağlayan özel bir wrapper panel yazıyoruz. Pencere küçülürse panel de orantılı küçülür.
+        JPanel canvasWrapper = new JPanel(null) {
+            @Override
+            public void doLayout() {
+                int w = getWidth();
+                int h = getHeight();
+                int size = Math.min(w, h);
+                int x = (w - size) / 2;
+                int y = (h - size) / 2;
+                glCanvas.setBounds(x, y, size, size);
+            }
+        };
         canvasWrapper.setBackground(new Color(8, 8, 12));
         canvasWrapper.add(glCanvas);
 
