@@ -3,10 +3,9 @@ package com.radar.model;
 import com.jogamp.opengl.GL2;
 import com.radar.config.SimulationConfig;
 import com.radar.core.ISimulationEntity;
+import com.radar.renderer.RenderContext;
 import com.radar.renderer.ShipRenderer;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
 import java.util.Random;
 import java.util.UUID;
 
@@ -14,36 +13,29 @@ import java.util.UUID;
  * Simülasyon sahnesindeki bir gemiyi temsil eder.
  *
  * <p><b>Hareket:</b> Sabit bir hız vektörüyle düz çizgi hareket eder.
- * Alan sınırlarına çarptığında ilgili eksen yönünde yansıma (reflection) yapar;
- * bu sayede hiçbir zaman ekran dışına çıkmaz.</p>
+ * Alan sınırlarına çarptığında ilgili eksen yönünde yansıma (reflection) yapar.</p>
  *
- * <p><b>İz (Trail):</b> Her {@code update()} çağrısında anlık pozisyon
- * bir {@link RadarTrail} nesnesi olarak iz kuyruğunun başına eklenir.
- * Kuyruk uzunluğu {@link SimulationConfig#getTrailLength()} ile sınırlandırılır.
- * Her yeni eleman tam opak ({@code 1.0f}), sonrakiler
- * {@code fadeFactor^i} formülüyle giderek şeffaflaşır.</p>
+ * <p><b>Görünürlük (Sweep-tabanlı Fading):</b> Gemi, radar sweep çizgisi
+ * üzerinden geçtiği anda tam parlak görünür. Sweep çizgisi uzaklaştıkça
+ * (y ekseni boyunca yukarı çıktıkça) gemi, {@link SimulationConfig#getSweepFadeDistance()}
+ * mesafesinde sıfır opaklığa düşer. Bu, gerçek radar ekranlarındaki fosfor
+ * sönüklesmesi (phosphor decay) etkisini taklit eder.</p>
  *
- * <p><b>Thread güvenliği:</b> {@code trail} kuyruğuna yalnızca simülasyon
- * thread'i yazar; render thread'i okur. Kopyalama ile okuma yapıldığından
- * senkronizasyon gerekmez (bkz. {@link #getTrailSnapshot()}).</p>
+ * <p><b>Thread güvenliği:</b> {@code position} ve {@code velocity}
+ * {@code volatile} olduğundan render thread'i güvenle okuyabilir.
+ * Yazma yalnızca simülasyon thread'inden yapılır.</p>
  */
 public final class Ship implements ISimulationEntity {
 
     private final UUID id;
 
-    /** Mevcut pozisyon; her update'de değişir. */
+    /** Mevcut pozisyon; simülasyon thread'i yazar, render thread'i okur. */
     private volatile Vector2D position;
 
     /** Hız vektörü (piksel/saniye). */
     private volatile Vector2D velocity;
 
-    /**
-     * İz kuyruğu: indeks 0 en yeni, son indeks en eski anlık görüntüdür.
-     * Yalnızca simülasyon thread'inden erişilir.
-     */
-    private final Deque<RadarTrail> trail;
-
-    /** Geminin simülasyondan kaldırılıp kaldırılmayacağını belirtir. */
+    /** Geminin sahnede aktif olup olmadığı. */
     private volatile boolean alive;
 
     private final SimulationConfig config;
@@ -51,7 +43,7 @@ public final class Ship implements ISimulationEntity {
     private static final Random RANDOM = new Random();
 
     /**
-     * Verilen konfigürasyona göre rastgele bir pozisyon ve hızla yeni bir gemi oluşturur.
+     * Verilen konfigürasyona göre rastgele pozisyon ve hızla yeni bir gemi oluşturur.
      *
      * @param config Simülasyon konfigürasyonu; null olamaz.
      */
@@ -61,7 +53,6 @@ public final class Ship implements ISimulationEntity {
         }
         this.config   = config;
         this.id       = UUID.randomUUID();
-        this.trail    = new ArrayDeque<>();
         this.alive    = true;
         this.position = spawnRandomPosition();
         this.velocity = spawnRandomVelocity();
@@ -86,14 +77,11 @@ public final class Ship implements ISimulationEntity {
     // -------------------------------------------------------------------------
 
     /**
-     * Gemiyi hareket ettirir ve iz kuyruğunu günceller.
-     * Yalnızca simülasyon thread'inden çağrılmalıdır.
+     * Gemiyi hareket ettirir. Yalnızca simülasyon thread'inden çağrılmalıdır.
      */
     @Override
     public void update(double deltaTime) {
         move(deltaTime);
-        addTrailPoint();
-        trimTrail();
     }
 
     // -------------------------------------------------------------------------
@@ -112,13 +100,19 @@ public final class Ship implements ISimulationEntity {
         // Yatay sınır yansıması
         if (newPos.x < minX || newPos.x > maxX) {
             velocity = velocity.reflectX();
-            newPos   = new Vector2D(Math.max(minX, Math.min(maxX, newPos.x)), newPos.y);
+            newPos   = new Vector2D(
+                    Math.max(minX, Math.min(maxX, newPos.x)),
+                    newPos.y
+            );
         }
 
         // Dikey sınır yansıması
         if (newPos.y < minY || newPos.y > maxY) {
             velocity = velocity.reflectY();
-            newPos   = new Vector2D(newPos.x, Math.max(minY, Math.min(maxY, newPos.y)));
+            newPos   = new Vector2D(
+                    newPos.x,
+                    Math.max(minY, Math.min(maxY, newPos.y))
+            );
         }
 
         position = newPos;
@@ -147,108 +141,75 @@ public final class Ship implements ISimulationEntity {
     // -------------------------------------------------------------------------
 
     /**
-     * Gemiyi ve izini JOGL bağlamına çizer.
-     * Yalnızca JOGL render thread'inden çağrılmalıdır.
+     * Gemiyi sweep-tabanlı opaklıkla JOGL bağlamına çizer.
+     *
+     * <p>Opaklık hesabı: sweep çizgisi geminin hemen üstünden geçtiğinde
+     * {@code 1.0f} (tam parlak), sweep uzaklaştıkça {@code sweepFadeDistance}
+     * mesafesinde {@code 0.0f}'a düşer.</p>
+     *
+     * <p>Yalnızca JOGL render thread'inden çağrılmalıdır.</p>
      */
     @Override
-    public void render(GL2 gl) {
-        // İz anlık görüntüsü üzerinden güvenle iterasyon yapılır
-        RadarTrail[] snapshot = getTrailSnapshot();
-
-        float colorR = config.getShipColorR();
-        float colorG = config.getShipColorG();
-        float colorB = config.getShipColorB();
-        int   size   = config.getShipSize();
-
-        for (RadarTrail trailPoint : snapshot) {
-            ShipRenderer.drawPyramidTop(
-                    gl,
-                    trailPoint.getPosition(),
-                    trailPoint.getOpacity(),
-                    size,
-                    colorR, colorG, colorB
-            );
+    public void render(GL2 gl, RenderContext ctx) {
+        float opacity = computeSweepOpacity(position.y, ctx.getSweepY());
+        if (opacity <= 0.01f) {
+            return; // Görünmez — çizme
         }
 
-        // En üstteki nokta (geminin kendisi) tam opak olarak çizilir
-        ShipRenderer.drawPyramidTop(
+        ShipRenderer.drawSquare(
                 gl,
                 position,
-                1.0f,
-                size,
-                colorR, colorG, colorB
+                opacity,
+                config.getShipSize(),
+                config.getShipColorR(),
+                config.getShipColorG(),
+                config.getShipColorB()
         );
+    }
+
+    // -------------------------------------------------------------------------
+    // Sweep Opaklık Hesabı (Private)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Geminin sweep pozisyonuna göre opaklığını hesaplar.
+     *
+     * <p>Formül:
+     * <ul>
+     *   <li>{@code sweepY < shipY} → Sweep henüz bu gemiye ulaşmadı → {@code 0.0f}</li>
+     *   <li>{@code 0 ≤ distance ≤ fadeDistance} → Lineer sönükleme: {@code 1 - d/fd}</li>
+     *   <li>{@code distance > fadeDistance} → Tamamen sönük → {@code 0.0f}</li>
+     * </ul>
+     * </p>
+     *
+     * @param shipY  Geminin Y koordinatı.
+     * @param sweepY Sweep çizgisinin mevcut Y koordinatı.
+     * @return [0.0, 1.0] arasında opaklık değeri.
+     */
+    private float computeSweepOpacity(double shipY, double sweepY) {
+        double distance     = sweepY - shipY;
+        double fadeDistance = config.getSweepFadeDistance();
+
+        if (distance < 0.0 || distance > fadeDistance) {
+            return 0.0f;
+        }
+        return (float) (1.0 - (distance / fadeDistance));
     }
 
     // -------------------------------------------------------------------------
     // Yardımcı (Private)
     // -------------------------------------------------------------------------
 
-    /**
-     * Konfigürasyon sınırları içinde rastgele bir spawn noktası üretir.
-     */
     private Vector2D spawnRandomPosition() {
         double x = RANDOM.nextDouble() * config.getRadarWidth();
         double y = RANDOM.nextDouble() * config.getRadarHeight();
         return new Vector2D(x, y);
     }
 
-    /**
-     * Min/max hız aralığında rastgele bir hız vektörü üretir.
-     * Yön açısı 0–360 derece arasında rastgele seçilir.
-     */
     private Vector2D spawnRandomVelocity() {
         double angle = RANDOM.nextDouble() * 2.0 * Math.PI;
         double speed = config.getMinShipSpeed()
                 + RANDOM.nextDouble() * (config.getMaxShipSpeed() - config.getMinShipSpeed());
         return new Vector2D(Math.cos(angle) * speed, Math.sin(angle) * speed);
-    }
-
-    /**
-     * Mevcut pozisyonu fadeFactor ile hesaplanmış opaklıkla iz kuyruğuna ekler.
-     * Her yeni eleman kuyruğun önüne (baş) eklenir; en eski arka tarafta kalır.
-     */
-    private void addTrailPoint() {
-        // Mevcut izin opaklıklarını kaydır: 0.indeksteki (en yeni) fadeFactor ile çarpılır
-        // Yeni nokta her zaman tam opak (1.0f) başlar;
-        // eski noktalar zaten kendi opaklıklarına sahip.
-        // Hesap: i. iz noktasının opaklığı = fadeFactor^i
-        float firstOpacity = config.getFadeFactor();
-
-        // Mevcut kuyruk başına yeni anlık görüntü eklenir
-        // (önceki "baş" şimdi 1. indekse kayar, dolayısıyla opaklığı fadeFactor^1)
-        trail.addFirst(new RadarTrail(position, firstOpacity));
-    }
-
-    /**
-     * İz kuyruğunu maksimum uzunlukla sınırlandırır;
-     * fazla eski noktaları kuyruk sonundan (en eski) kaldırır.
-     */
-    private void trimTrail() {
-        int maxTrail = config.getTrailLength();
-        while (trail.size() > maxTrail) {
-            trail.removeLast();
-        }
-    }
-
-    /**
-     * İz kuyruğunun thread-safe anlık görüntüsünü döndürür.
-     * Her eleman için gerçek opaklık {@code fadeFactor^i} olarak yeniden hesaplanır;
-     * bu sayede konfigürasyon çalışma zamanında değişse bile render doğru görünür.
-     *
-     * @return İz noktaları dizisi; indeks 0 en yeni, son indeks en eski.
-     */
-    public RadarTrail[] getTrailSnapshot() {
-        Object[] raw        = trail.toArray();
-        RadarTrail[] result = new RadarTrail[raw.length];
-        float fadeFactor    = config.getFadeFactor();
-
-        for (int i = 0; i < raw.length; i++) {
-            RadarTrail original = (RadarTrail) raw[i];
-            // i=0 → fadeFactor^1, i=1 → fadeFactor^2, ...
-            float recomputedOpacity = (float) Math.pow(fadeFactor, i + 1);
-            result[i] = new RadarTrail(original.getPosition(), recomputedOpacity);
-        }
-        return result;
     }
 }

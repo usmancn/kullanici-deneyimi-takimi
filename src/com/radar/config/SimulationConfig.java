@@ -60,10 +60,10 @@ public final class SimulationConfig {
      * Gemilerin maksimum hareket hızı (piksel/saniye).
      * Spawn sırasında [minShipSpeed, maxShipSpeed] aralığında rastgele atanır.
      */
-    private float maxShipSpeed = 120.0f;
+    private float maxShipSpeed = 22.0f;
 
     /** Gemilerin minimum hareket hızı (piksel/saniye). */
-    private float minShipSpeed = 30.0f;
+    private float minShipSpeed = 6.0f;
 
     // -------------------------------------------------------------------------
     // Metrik Paneli
@@ -82,26 +82,54 @@ public final class SimulationConfig {
     private int metricsHistorySize = 120;
 
     // -------------------------------------------------------------------------
+    // Sweep (Tarama Çizgisi)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Sweep tarama çizgisinin dikey hızı (piksel/saniye).
+     * 1000 px / sweepSpeedPps = tam tarama süresi (saniye).
+     * Örnek: 80 pps → ~12.5 saniyelik tam tarama.
+     */
+    private float sweepSpeedPps = 80.0f;
+
+    /**
+     * Sweep çizgisi bir geminin üstüne geçtikten sonra gemi kaç piksel
+     * yukarı ilerleyene kadar tamamen sönükleşir.
+     * 500 pps → sweep geçtikten sonra ~6 saniye görünür kalir.
+     */
+    private float sweepFadeDistance = 550.0f;
+
+    // -------------------------------------------------------------------------
+    // Grid (Izgara)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Radar ızgara bölüm sayısı. 4 değeri hem X hem Y ekseninde
+     * 0, 250, 500, 750, 1000 koordinatlarında çizgi oluşturur.
+     */
+    private int gridDivisions = 4;
+
+    // -------------------------------------------------------------------------
     // Görsel / Renk
     // -------------------------------------------------------------------------
 
     /**
-     * Gemi ve iz şekillerinin kırmızı kanalı (RGBA, 0.0–1.0).
+     * Gemi ve iz Şkillerinin kırmızı kanalı (RGBA, 0.0–1.0).
      * Renk teması: kırmızı baskın.
      */
     private float shipColorR = 1.0f;
 
-    /** Gemi ve iz şekillerinin yeşil kanalı. */
-    private float shipColorG = 0.1f;
+    /** Gemi ve iz Şekillerinin yeşil kanalı. */
+    private float shipColorG = 0.15f;
 
-    /** Gemi ve iz şekillerinin mavi kanalı. */
-    private float shipColorB = 0.1f;
+    /** Gemi ve iz Şekillerinin mavi kanalı. */
+    private float shipColorB = 0.05f;
 
-    /** Radar arka plan kırmızı kanalı (koyu siyah). */
+    /** Radar arka plan kırmızı kanalı (koyu yeşilmsi). */
     private float bgColorR = 0.02f;
 
-    /** Radar arka plan yeşil kanalı. */
-    private float bgColorG = 0.02f;
+    /** Radar arka plan yeşil kanalı — yeşilimsi ton verir. */
+    private float bgColorG = 0.07f;
 
     /** Radar arka plan mavi kanalı. */
     private float bgColorB = 0.02f;
@@ -302,5 +330,38 @@ public final class SimulationConfig {
 
     public void setDebugMode(boolean debugMode) {
         this.debugMode = debugMode;
+    }
+
+    public float getSweepSpeedPps() {
+        return sweepSpeedPps;
+    }
+
+    public void setSweepSpeedPps(float sweepSpeedPps) {
+        if (sweepSpeedPps <= 0) {
+            throw new IllegalArgumentException("sweepSpeedPps pozitif olmalidir: " + sweepSpeedPps);
+        }
+        this.sweepSpeedPps = sweepSpeedPps;
+    }
+
+    public float getSweepFadeDistance() {
+        return sweepFadeDistance;
+    }
+
+    public void setSweepFadeDistance(float sweepFadeDistance) {
+        if (sweepFadeDistance <= 0) {
+            throw new IllegalArgumentException("sweepFadeDistance pozitif olmalidir: " + sweepFadeDistance);
+        }
+        this.sweepFadeDistance = sweepFadeDistance;
+    }
+
+    public int getGridDivisions() {
+        return gridDivisions;
+    }
+
+    public void setGridDivisions(int gridDivisions) {
+        if (gridDivisions <= 0) {
+            throw new IllegalArgumentException("gridDivisions pozitif olmalidir: " + gridDivisions);
+        }
+        this.gridDivisions = gridDivisions;
     }
 }

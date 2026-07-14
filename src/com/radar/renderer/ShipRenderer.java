@@ -4,12 +4,12 @@ import com.jogamp.opengl.GL2;
 import com.radar.model.Vector2D;
 
 /**
- * JOGL bağlamında şekil çizim yardımcı sınıfı.
+ * JOGL bağlamında gemi simgesi çizim yardımcı sınıfı.
  *
  * <p>Bu sınıf tamamen <b>statik</b> metotlardan oluşur; örneklenemez.
- * Amacı: çizim mantığını ({@link com.radar.model.Ship}) varlık sınıfından
- * ayırmak ve gerekirse başka entity türleri tarafından da kullanılabilmesini
- * sağlamaktır (Single Responsibility prensibi).</p>
+ * Gemi görsel temsili olarak küçük dolu bir kare ve etrafında hafif
+ * bir ışıma (glow) efekti kullanılır — bu, gerçek radar ekranlarındaki
+ * fosfor parlaması etkisini taklit eder.</p>
  *
  * <p><b>Thread güvenliği:</b> Tüm metotlar yalnızca JOGL render thread'inden
  * (GLEventListener#display içinden) çağrılmalıdır.</p>
@@ -22,94 +22,63 @@ public final class ShipRenderer {
     }
 
     /**
-     * Belirtilen pozisyona, tepeden bakılan bir piramit görünümünde şekil çizer.
+     * Belirtilen pozisyona sweep-tabanlı opaklıkla dolu kare çizer.
      *
-     * <p>Şekil, merkez tepe noktasından 4 köşeye uzanan 4 üçgenden oluşur.
-     * Sonuç görsel olarak bir "radar izi noktası" görünümüne sahiptir:
-     * tepe merkezi parlak, kenarlar giderek şeffaflaşır.</p>
-     *
-     * <p>Anti-aliasing'in etkin olması için çağrıdan önce
-     * {@code GL_BLEND} ve {@code GL_POLYGON_SMOOTH} etkinleştirilmiş olmalıdır
-     * (bkz. {@link RadarRenderer#init}).</p>
+     * <p>İki katmanlı çizim yapılır:
+     * <ol>
+     *   <li><b>Glow katmanı</b>: Karenin 2.5 katı büyüklükte yarı saydam hale,
+     *       fosfor parlaması etkisi verir.</li>
+     *   <li><b>Çekirdek kare</b>: Tam dolu, keskin kenarlı kare.</li>
+     * </ol>
+     * </p>
      *
      * @param gl      Aktif GL2 bağlamı.
-     * @param center  Şeklin merkez koordinatı (tepe nokta).
-     * @param opacity Bu şeklin opaklık değeri [0.0, 1.0].
-     * @param size    Şeklin yarı-boyutu (piksel). Tam boyut {@code size} dir.
+     * @param center  Karenin merkez koordinatı.
+     * @param opacity Bu karenin opaklık değeri [0.0, 1.0].
+     * @param size    Karenin piksel cinsinden kenar uzunluğu.
      * @param r       Kırmızı kanal [0.0, 1.0].
      * @param g       Yeşil kanal [0.0, 1.0].
      * @param b       Mavi kanal [0.0, 1.0].
      */
-    public static void drawPyramidTop(GL2 gl,
-                                      Vector2D center,
-                                      float opacity,
-                                      int size,
-                                      float r,
-                                      float g,
-                                      float b) {
-        float cx = (float) center.x;
-        float cy = (float) center.y;
+    public static void drawSquare(GL2 gl,
+                                  Vector2D center,
+                                  float opacity,
+                                  int size,
+                                  float r,
+                                  float g,
+                                  float b) {
+        if (opacity <= 0.01f) {
+            return; // Görünmez nokta çizme
+        }
+
+        float cx   = (float) center.x;
+        float cy   = (float) center.y;
         float half = size / 2.0f;
 
-        // Dört köşe noktası
-        float leftX  = cx - half;
-        float rightX = cx + half;
-        float bottomY = cy - half;
-        float topY    = cy + half;
+        // --- Glow katmanı (2.5× büyüklükte, düşük alfa) ---
+        float glowHalf = half * 2.5f;
+        gl.glBegin(GL2.GL_QUADS);
+        gl.glColor4f(r, g, b, opacity * 0.20f);
+        gl.glVertex2f(cx - glowHalf, cy - glowHalf);
+        gl.glVertex2f(cx + glowHalf, cy - glowHalf);
+        gl.glVertex2f(cx + glowHalf, cy + glowHalf);
+        gl.glVertex2f(cx - glowHalf, cy + glowHalf);
+        gl.glEnd();
 
-        // Üçgen 1: Merkez → Sol-Alt → Sağ-Alt  (ALT KENAR)
-        // Üçgen 2: Merkez → Sağ-Alt → Sağ-Üst  (SAĞ KENAR)
-        // Üçgen 3: Merkez → Sağ-Üst → Sol-Üst  (ÜST KENAR)
-        // Üçgen 4: Merkez → Sol-Üst → Sol-Alt   (SOL KENAR)
-
-        gl.glBegin(GL2.GL_TRIANGLES);
-
-        // Üçgen 1
-        setVertexColor(gl, r, g, b, opacity);          // merkez → parlak
-        gl.glVertex2f(cx, cy);
-        setVertexColor(gl, r, g, b, opacity * 0.0f);   // köşe  → şeffaf
-        gl.glVertex2f(leftX, bottomY);
-        setVertexColor(gl, r, g, b, opacity * 0.0f);
-        gl.glVertex2f(rightX, bottomY);
-
-        // Üçgen 2
-        setVertexColor(gl, r, g, b, opacity);
-        gl.glVertex2f(cx, cy);
-        setVertexColor(gl, r, g, b, opacity * 0.0f);
-        gl.glVertex2f(rightX, bottomY);
-        setVertexColor(gl, r, g, b, opacity * 0.0f);
-        gl.glVertex2f(rightX, topY);
-
-        // Üçgen 3
-        setVertexColor(gl, r, g, b, opacity);
-        gl.glVertex2f(cx, cy);
-        setVertexColor(gl, r, g, b, opacity * 0.0f);
-        gl.glVertex2f(rightX, topY);
-        setVertexColor(gl, r, g, b, opacity * 0.0f);
-        gl.glVertex2f(leftX, topY);
-
-        // Üçgen 4
-        setVertexColor(gl, r, g, b, opacity);
-        gl.glVertex2f(cx, cy);
-        setVertexColor(gl, r, g, b, opacity * 0.0f);
-        gl.glVertex2f(leftX, topY);
-        setVertexColor(gl, r, g, b, opacity * 0.0f);
-        gl.glVertex2f(leftX, bottomY);
-
+        // --- Çekirdek kare (tam opak, küçük) ---
+        gl.glBegin(GL2.GL_QUADS);
+        gl.glColor4f(r, g, b, clampAlpha(opacity));
+        gl.glVertex2f(cx - half, cy - half);
+        gl.glVertex2f(cx + half, cy - half);
+        gl.glVertex2f(cx + half, cy + half);
+        gl.glVertex2f(cx - half, cy + half);
         gl.glEnd();
     }
 
     /**
-     * Bir vertex için RGBA renk değerini ayarlar.
-     * Alfa kanalı {@code opacity} parametresinden gelir.
-     *
-     * @param gl      GL2 bağlamı.
-     * @param r       Kırmızı [0.0, 1.0].
-     * @param g       Yeşil [0.0, 1.0].
-     * @param b       Mavi [0.0, 1.0].
-     * @param alpha   Alfa / opaklık [0.0, 1.0].
+     * Alfa değerini [0.0, 1.0] aralığıyla sınırlandırır.
      */
-    private static void setVertexColor(GL2 gl, float r, float g, float b, float alpha) {
-        gl.glColor4f(r, g, b, Math.max(0.0f, Math.min(1.0f, alpha)));
+    private static float clampAlpha(float alpha) {
+        return Math.max(0.0f, Math.min(1.0f, alpha));
     }
 }
