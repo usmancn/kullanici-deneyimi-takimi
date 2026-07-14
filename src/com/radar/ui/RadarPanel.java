@@ -90,10 +90,9 @@ public final class RadarPanel extends JPanel {
         this.controlPanel = new ControlPanel(config, engine);
         this.controlPanel.setPreferredSize(new Dimension(220, 0));
 
-        // GLCanvas + debug overlay'i JLayeredPane içine al
-        JLayeredPane layeredPane = buildLayeredPane(config);
-
-        add(layeredPane,  BorderLayout.CENTER);
+        // JLayeredPane, AWT GLCanvas ile Windows'ta boyutlandırma sorunlarına (reshape tetiklememe)
+        // yol açabiliyor. Bu yüzden doğrudan BorderLayout.CENTER'a ekliyoruz.
+        add(glCanvas,     BorderLayout.CENTER);
         add(controlPanel, BorderLayout.EAST);
     }
 
