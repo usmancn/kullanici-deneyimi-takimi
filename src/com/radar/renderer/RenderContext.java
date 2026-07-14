@@ -12,14 +12,21 @@ public final class RenderContext {
 
     /** Sweep tarama çizgisinin mevcut dünya Y koordinatı [0, radarHeight]. */
     private final double sweepY;
+    private final com.jogamp.opengl.util.gl2.GLUT glut;
 
     /**
      * Yeni bağlam nesnesi oluşturur.
      *
      * @param sweepY Sweep çizgisinin mevcut Y koordinatı.
+     * @param glut   GLUT örneği (metin çizimi için)
      */
-    public RenderContext(double sweepY) {
+    public RenderContext(double sweepY, com.jogamp.opengl.util.gl2.GLUT glut) {
         this.sweepY = sweepY;
+        this.glut = glut;
+    }
+
+    public com.jogamp.opengl.util.gl2.GLUT getGlut() {
+        return glut;
     }
 
     /**

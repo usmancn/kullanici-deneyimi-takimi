@@ -41,12 +41,14 @@ public final class MainFrame extends JFrame {
     private static final String TAB_RADAR = "Radar";
     private static final String TAB_CPU   = "CPU";
     private static final String TAB_GPU   = "GPU";
+    private static final String TAB_MARKED = "İşaretli Gemiler";
 
 
-    private final RadarPanel    radarPanel;
-    private final MetricsPanel  cpuPanel;
-    private final MetricsPanel  gpuPanel;
-    private final SimulationEngine engine;
+    private final RadarPanel        radarPanel;
+    private final MetricsPanel      cpuPanel;
+    private final MetricsPanel      gpuPanel;
+    private final MarkedShipsPanel  markedShipsPanel;
+    private final SimulationEngine  engine;
 
     /**
      * Yeni bir ana pencere oluşturur ve tüm bileşenleri bağlar.
@@ -73,6 +75,7 @@ public final class MainFrame extends JFrame {
         this.radarPanel = new RadarPanel(config, entityManager, engine);
         this.cpuPanel   = new MetricsPanel(new CpuMetricsProvider(), config);
         this.gpuPanel   = new MetricsPanel(new GpuMetricsProvider(), config);
+        this.markedShipsPanel = new MarkedShipsPanel(entityManager);
 
         // Sekmeli yapı
         JTabbedPane tabbedPane = buildTabbedPane();
@@ -129,6 +132,7 @@ public final class MainFrame extends JFrame {
         tabbedPane.addTab(TAB_RADAR, radarPanel);
         tabbedPane.addTab(TAB_CPU,   cpuPanel);
         tabbedPane.addTab(TAB_GPU,   gpuPanel);
+        tabbedPane.addTab(TAB_MARKED, markedShipsPanel);
 
         // Sekme değişim yönetimi
         tabbedPane.addChangeListener(new ChangeListener() {

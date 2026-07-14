@@ -78,26 +78,58 @@ public final class RadarPanel extends JPanel {
         this.glCanvas.setPreferredSize(radarSize); // Mümkünse 1000x1000 açılmaya çalışsın
         // Minimum size'ı küçük tutalım ki Windows DPI ölçeklemesinden dolayı ekran daralırsa panel de küçülebilsin
         this.glCanvas.setMinimumSize(new Dimension(200, 200));
+        
+        // Klavye olayları için odaklanabilir yapıyoruz
+        this.glCanvas.setFocusable(true);
 
         // Renderer bağlama
         RadarRenderer renderer = new RadarRenderer(config, entityManager);
         glCanvas.addGLEventListener(renderer);
 
-        // Mouse takibi
+        // Mouse hareket takibi
         glCanvas.addMouseMotionListener(new java.awt.event.MouseMotionAdapter() {
             @Override
             public void mouseMoved(java.awt.event.MouseEvent e) {
-                // OpenGL koordinat sisteminde Y=0 alttadır. Swing'de ise üstte.
-                // GLCanvas ekrana sığmak için küçülmüş olsa bile, mantıksal simülasyon hep 1000x1000'dir.
-                // Bu yüzden farenin bulunduğu fiziksel konumu, 1000x1000 mantıksal sisteme oranlıyoruz.
                 double scaleX = 1000.0 / glCanvas.getWidth();
                 double scaleY = 1000.0 / glCanvas.getHeight();
-                
                 int logicalX = (int) (e.getX() * scaleX);
                 int logicalY = (int) ((glCanvas.getHeight() - e.getY()) * scaleY);
                 
                 if (controlPanel != null) {
                     controlPanel.updateMouseCoords(logicalX, logicalY);
+                }
+                renderer.updateMousePosition(logicalX, logicalY, true);
+            }
+        });
+
+        // Tıklama ve odaklanma için MouseListener
+        glCanvas.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent e) {
+                glCanvas.requestFocusInWindow();
+            }
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent e) {
+                renderer.updateMousePosition(-1, -1, false);
+            }
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getButton() == java.awt.event.MouseEvent.BUTTON1) {
+                    double scaleX = 1000.0 / glCanvas.getWidth();
+                    double scaleY = 1000.0 / glCanvas.getHeight();
+                    double logicalX = e.getX() * scaleX;
+                    double logicalY = (glCanvas.getHeight() - e.getY()) * scaleY;
+                    renderer.registerClick(logicalX, logicalY);
+                }
+            }
+        });
+
+        // Space tuşu takibi
+        glCanvas.addKeyListener(new java.awt.event.KeyAdapter() {
+            @Override
+            public void keyPressed(java.awt.event.KeyEvent e) {
+                if (e.getKeyCode() == java.awt.event.KeyEvent.VK_SPACE) {
+                    renderer.registerSpacePress();
                 }
             }
         });

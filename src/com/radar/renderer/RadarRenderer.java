@@ -66,6 +66,16 @@ public final class RadarRenderer implements GLEventListener {
     /** Mevcut viewport yüksekliği (piksel), reshape() tarafından güncellenir. */
     private int viewportH;
 
+    // Etkileşim durumları
+    private double mouseLogicalX = -100.0;
+    private double mouseLogicalY = -100.0;
+    private boolean showMouseCoords = false;
+    
+    private boolean pendingClick = false;
+    private double clickX, clickY;
+    
+    private boolean pendingSpace = false;
+
     /**
      * Yeni bir radar renderer oluşturur.
      *
@@ -84,6 +94,22 @@ public final class RadarRenderer implements GLEventListener {
         this.glut          = new GLUT();
         this.sweepY        = 0.0;
         this.lastDisplayNanos = System.nanoTime();
+    }
+
+    public void updateMousePosition(double logicalX, double logicalY, boolean visible) {
+        this.mouseLogicalX = logicalX;
+        this.mouseLogicalY = logicalY;
+        this.showMouseCoords = visible;
+    }
+
+    public void registerClick(double logicalX, double logicalY) {
+        this.clickX = logicalX;
+        this.clickY = logicalY;
+        this.pendingClick = true;
+    }
+
+    public void registerSpacePress() {
+        this.pendingSpace = true;
     }
 
     // -------------------------------------------------------------------------
@@ -153,23 +179,67 @@ public final class RadarRenderer implements GLEventListener {
         gl.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT);
         gl.glLoadIdentity();
 
-        // 1. Izgara çizgileri
+        // 1. Etkileşim İşleme (Tıklama ve Space)
+        processInteractions();
+
+        // 2. Izgara çizgileri
         drawGrid(gl);
 
-        // 2. Varlıkları sweep-tabanlı opaklıkla render et
-        RenderContext ctx = new RenderContext(sweepY);
+        // 3. Varlıkları sweep-tabanlı opaklıkla render et
+        RenderContext ctx = new RenderContext(sweepY, glut);
         List<ISimulationEntity> entities = entityManager.getAll();
         for (ISimulationEntity entity : entities) {
             entity.render(gl, ctx);
         }
 
-        // 3. Sweep çizgisi (varlıkların üstünde)
+        // 4. Sweep çizgisi (varlıkların üstünde)
         drawSweepLine(gl);
 
-        // 4. Koordinat etiketleri (en üstte)
+        // 5. Koordinat etiketleri (en üstte)
         drawGridLabels(gl);
+        
+        // 6. Fare koordinat göstergesi
+        drawMouseCoords(gl);
 
         gl.glFlush();
+    }
+
+    private void processInteractions() {
+        if (pendingSpace) {
+            pendingSpace = false;
+            // Space basıldıysa tüm işaretleri kaldır
+            for (ISimulationEntity entity : entityManager.getAll()) {
+                if (entity instanceof com.radar.model.Ship) {
+                    ((com.radar.model.Ship) entity).setMarked(false);
+                }
+            }
+        }
+
+        if (pendingClick) {
+            pendingClick = false;
+            // Tıklanan yere en yakın gemiyi bul
+            for (ISimulationEntity entity : entityManager.getAll()) {
+                if (entity instanceof com.radar.model.Ship) {
+                    com.radar.model.Ship ship = (com.radar.model.Ship) entity;
+                    if (ship.hitTest(clickX, clickY)) {
+                        ship.setMarked(!ship.isMarked()); // İşaretle veya kaldır
+                        break; // Aynı anda sadece birine tıklanmış olsun
+                    }
+                }
+            }
+        }
+    }
+
+    private void drawMouseCoords(GL2 gl) {
+        if (showMouseCoords && mouseLogicalX >= 0 && mouseLogicalY >= 0 
+            && mouseLogicalX <= config.getRadarWidth() && mouseLogicalY <= config.getRadarHeight()) {
+            
+            gl.glColor4f(1.0f, 0.8f, 0.0f, 1.0f); // Sarı/Turuncu renk
+            // Farenin 15 birim sağ-üstüne yaz
+            gl.glRasterPos2f((float) mouseLogicalX + 15.0f, (float) mouseLogicalY + 15.0f);
+            String text = String.format("X:%d Y:%d", (int) mouseLogicalX, (int) mouseLogicalY);
+            glut.glutBitmapString(GLUT.BITMAP_HELVETICA_12, text);
+        }
     }
 
     @Override

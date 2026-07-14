@@ -76,9 +76,11 @@ public final class Ship implements ISimulationEntity {
      * İlk geçişte true olur.
      */
     private boolean hasBeenSwept = false;
-
     private volatile boolean alive;
     private final SimulationConfig config;
+
+    private volatile boolean marked = false;
+    private volatile String customName;
 
     private static final Random RANDOM = new Random();
 
@@ -91,6 +93,23 @@ public final class Ship implements ISimulationEntity {
         this.alive            = true;
         this.position         = spawnRandomPosition();
         this.velocity         = spawnRandomVelocity();
+        this.customName       = "Gemi-" + id.toString().substring(0, 4);
+    }
+
+    public boolean isMarked() {
+        return marked;
+    }
+
+    public void setMarked(boolean marked) {
+        this.marked = marked;
+    }
+
+    public String getCustomName() {
+        return customName;
+    }
+
+    public void setCustomName(String customName) {
+        this.customName = customName;
     }
 
     // -------------------------------------------------------------------------
@@ -233,7 +252,10 @@ public final class Ship implements ISimulationEntity {
                     age = config.getRadarHeight();
                 }
             }
+        }
 
+        for (Blip b : blips) {
+            double age = totalSweepTravel - b.spawnTravel;
             float opacity = computeOpacity(age);
             ShipRenderer.drawPyramidTop(
                     gl,
@@ -245,6 +267,31 @@ public final class Ship implements ISimulationEntity {
                     config.getShipColorB()
             );
         }
+
+        if (this.marked && !blips.isEmpty()) {
+            Blip newest = blips.getLast();
+            ShipRenderer.drawMark(gl, newest.position, this.customName, ctx.getGlut());
+        }
+    }
+
+    /**
+     * Verilen (x,y) mantıksal koordinatının, geminin ekranda görünen herhangi bir 
+     * izinin (blip) üzerine tıklanıp tıklanmadığını kontrol eder.
+     * @param x Tıklanan X (mantıksal 0-1000)
+     * @param y Tıklanan Y (mantıksal 0-1000)
+     * @return Eğer tıklama bu gemiye isabet ettiyse true
+     */
+    public boolean hitTest(double x, double y) {
+        if (!isAlive()) return false;
+        double threshold = config.getShipSize() * 1.5; // Biraz tölerans payı
+        for (Blip b : blips) {
+            double dx = b.position.x - x;
+            double dy = b.position.y - y;
+            if (Math.sqrt(dx*dx + dy*dy) <= threshold) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // -------------------------------------------------------------------------

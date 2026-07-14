@@ -114,6 +114,30 @@ public final class ShipRenderer {
     }
 
     /**
+     * İşaretli (marked) gemilerin etrafına dikkat çekici bir halka/kutu çizer ve ismini yazar.
+     */
+    public static void drawMark(GL2 gl, Vector2D center, String name, com.jogamp.opengl.util.gl2.GLUT glut) {
+        float cx = (float) center.x;
+        float cy = (float) center.y;
+        float size = 20.0f; // İşaret boyutu
+        
+        gl.glLineWidth(1.5f);
+        gl.glBegin(GL2.GL_LINE_LOOP);
+        gl.glColor4f(0.2f, 0.8f, 1.0f, 0.9f); // Açık mavi (Cyan) renk
+        gl.glVertex2f(cx - size, cy - size);
+        gl.glVertex2f(cx + size, cy - size);
+        gl.glVertex2f(cx + size, cy + size);
+        gl.glVertex2f(cx - size, cy + size);
+        gl.glEnd();
+        gl.glLineWidth(1.0f);
+
+        if (name != null && glut != null) {
+            gl.glRasterPos2f(cx + size + 5.0f, cy + size + 5.0f);
+            glut.glutBitmapString(com.jogamp.opengl.util.gl2.GLUT.BITMAP_HELVETICA_12, name);
+        }
+    }
+
+    /**
      * Alfa değerini [0.0, 1.0] aralığıyla sınırlandırır.
      */
     private static float clampAlpha(float alpha) {
