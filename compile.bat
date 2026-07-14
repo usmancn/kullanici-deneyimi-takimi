@@ -11,7 +11,7 @@ echo [2/3] Kaynak dosyalar listeleniyor...
 dir /s /b src\*.java > sources.txt
 
 echo [3/3] Derleniyor (Java 11)...
-javac -cp "lib\*" --release 11 -d out @sources.txt
+javac -encoding UTF-8 -cp "lib\*" --release 11 -d out @sources.txt
 
 if %ERRORLEVEL% == 0 (
     echo.
