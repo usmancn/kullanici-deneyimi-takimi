@@ -202,7 +202,7 @@ public final class RadarPanel extends JPanel {
         if (animator.isPaused()) {
             animator.resume();
         }
-        if (config.isDebugMode() && debugTimer != null) {
+        if (debugTimer != null && !debugTimer.isRunning()) {
             debugTimer.start();
         }
     }
@@ -267,6 +267,7 @@ public final class RadarPanel extends JPanel {
     private void startDebugTimer() {
         debugTimer = new Timer(DEBUG_UPDATE_INTERVAL_MS, e -> updateDebugOverlay());
         debugTimer.setInitialDelay(0);
+        debugTimer.start();
     }
 
     /**
