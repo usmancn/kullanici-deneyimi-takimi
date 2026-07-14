@@ -207,10 +207,14 @@ public final class RadarRenderer implements GLEventListener {
     private void processInteractions() {
         if (pendingSpace) {
             pendingSpace = false;
-            // Space basıldıysa tüm işaretleri kaldır
+            // Space basıldığında sadece farenin altındaki (hover olan) geminin işaretini kaldır
             for (ISimulationEntity entity : entityManager.getAll()) {
                 if (entity instanceof com.radar.model.Ship) {
-                    ((com.radar.model.Ship) entity).setMarked(false);
+                    com.radar.model.Ship ship = (com.radar.model.Ship) entity;
+                    if (ship.isMarked() && ship.hitTest(mouseLogicalX, mouseLogicalY)) {
+                        ship.setMarked(false);
+                        break;
+                    }
                 }
             }
         }

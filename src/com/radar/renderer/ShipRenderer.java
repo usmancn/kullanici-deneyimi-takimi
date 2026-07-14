@@ -119,20 +119,25 @@ public final class ShipRenderer {
     public static void drawMark(GL2 gl, Vector2D center, String name, com.jogamp.opengl.util.gl2.GLUT glut) {
         float cx = (float) center.x;
         float cy = (float) center.y;
-        float size = 20.0f; // İşaret boyutu
+        float radius = 18.0f; // İşaret yarıçapı
         
         gl.glLineWidth(1.5f);
         gl.glBegin(GL2.GL_LINE_LOOP);
         gl.glColor4f(0.2f, 0.8f, 1.0f, 0.9f); // Açık mavi (Cyan) renk
-        gl.glVertex2f(cx - size, cy - size);
-        gl.glVertex2f(cx + size, cy - size);
-        gl.glVertex2f(cx + size, cy + size);
-        gl.glVertex2f(cx - size, cy + size);
+        
+        // Daire çizimi
+        int segments = 32;
+        for (int i = 0; i < segments; i++) {
+            double theta = 2.0 * Math.PI * (double) i / (double) segments;
+            float px = cx + radius * (float) Math.cos(theta);
+            float py = cy + radius * (float) Math.sin(theta);
+            gl.glVertex2f(px, py);
+        }
         gl.glEnd();
         gl.glLineWidth(1.0f);
 
         if (name != null && glut != null) {
-            gl.glRasterPos2f(cx + size + 5.0f, cy + size + 5.0f);
+            gl.glRasterPos2f(cx + radius + 5.0f, cy + radius + 5.0f);
             glut.glutBitmapString(com.jogamp.opengl.util.gl2.GLUT.BITMAP_HELVETICA_12, name);
         }
     }
