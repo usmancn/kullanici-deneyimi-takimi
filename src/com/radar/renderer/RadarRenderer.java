@@ -124,17 +124,14 @@ public final class RadarRenderer implements GLEventListener {
         this.viewportW = width;
         this.viewportH = height;
 
-        // Pencere yeniden boyutlandırıldığında simülasyon alanını (config) de güncelle
-        // Böylece radar her zaman ekranı tam doldurur ve kesilmez.
-        if (width > 0) config.setRadarWidth(width);
-        if (height > 0) config.setRadarHeight(height);
-
         gl.glViewport(0, 0, width, height);
 
-        // Projeksiyon: sol-alt (0,0), sağ-üst (width, height)
+        // Projeksiyon: Mantıksal simülasyon alanı HER ZAMAN config'deki boyuttadır (1000x1000).
+        // glViewport tüm pencereyi kapladığı için, 1000x1000'lik bu alan
+        // ekranın tamamına esnetilir. Böylece koordinatlar hep 1000 üzerinde kalır.
         gl.glMatrixMode(GL2.GL_PROJECTION);
         gl.glLoadIdentity();
-        gl.glOrtho(0, Math.max(1, width), 0, Math.max(1, height), -1.0, 1.0);
+        gl.glOrtho(0, config.getRadarWidth(), 0, config.getRadarHeight(), -1.0, 1.0);
 
         gl.glMatrixMode(GL2.GL_MODELVIEW);
         gl.glLoadIdentity();
