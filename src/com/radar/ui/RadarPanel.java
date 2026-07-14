@@ -126,12 +126,14 @@ public final class RadarPanel extends JPanel {
             }
         });
 
-        // Space tuşu takibi
+        // Tuş takibi (Space: tekli silme, C veya ESC: tümünü silme)
         glCanvas.addKeyListener(new java.awt.event.KeyAdapter() {
             @Override
             public void keyPressed(java.awt.event.KeyEvent e) {
                 if (e.getKeyCode() == java.awt.event.KeyEvent.VK_SPACE) {
                     renderer.registerSpacePress();
+                } else if (e.getKeyCode() == java.awt.event.KeyEvent.VK_C || e.getKeyCode() == java.awt.event.KeyEvent.VK_ESCAPE) {
+                    renderer.registerClearMarksPress();
                 }
             }
         });

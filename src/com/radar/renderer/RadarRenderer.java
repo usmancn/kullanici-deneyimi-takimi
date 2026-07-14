@@ -75,6 +75,7 @@ public final class RadarRenderer implements GLEventListener {
     private double clickX, clickY;
     
     private boolean pendingSpace = false;
+    private boolean pendingClearMarks = false;
     
     // Kamera (Zoom ve Pan) durumları
     private double zoomLevel = 1.0;
@@ -175,6 +176,10 @@ public final class RadarRenderer implements GLEventListener {
 
     public void registerSpacePress() {
         this.pendingSpace = true;
+    }
+    
+    public void registerClearMarksPress() {
+        this.pendingClearMarks = true;
     }
 
     // -------------------------------------------------------------------------
@@ -337,6 +342,15 @@ public final class RadarRenderer implements GLEventListener {
     }
 
     private void processInteractions() {
+        if (pendingClearMarks) {
+            pendingClearMarks = false;
+            for (ISimulationEntity entity : entityManager.getAll()) {
+                if (entity instanceof com.radar.model.Ship) {
+                    ((com.radar.model.Ship) entity).setMarked(false);
+                }
+            }
+        }
+        
         if (pendingSpace) {
             pendingSpace = false;
             // Space basıldığında sadece farenin altındaki (hover olan) geminin işaretini kaldır
