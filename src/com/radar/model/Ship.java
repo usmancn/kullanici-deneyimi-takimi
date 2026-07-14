@@ -219,34 +219,30 @@ public final class Ship implements ISimulationEntity {
     /**
      * Sweep mesafesine göre opaklık hesaplar.
      *
-     * <p>Formül:
+     * <p>Formül (sweep geçtikten sonra):
      * <ul>
-     *   <li>Sweep, geminin üstünden yeni geçtiyse ({@code distance ≈ 0}) → {@code 1.0f}</li>
-     *   <li>Sweep {@code fadeDistance} kadar yukarıda ise → {@code minOpacity}</li>
-     *   <li>Sweep henüz geçmediyse ({@code distance < 0}) → {@code minOpacity}</li>
-     *   <li>Sweep çok uzaktaysa ({@code distance > fadeDistance}) → {@code minOpacity}</li>
+     *   <li>Hemen geçtikten sonra (distance ≈ 0) → {@code 1.0f} (tam parlak)</li>
+     *   <li>Sweep {@code fadeDistance} kadar yukarıda → {@code minOpacity} (en loş)</li>
+     *   <li>Sweep henüz geçmedi ya da çok uzakta → {@code minOpacity} (loş ama görünür)</li>
      * </ul>
-     * Tüm durumlarda {@code minOpacity} tabanı korunur: gemi hiçbir zaman
-     * tamamen görünmez olmaz.
+     * Gemi asla tamamen kaybolmaz — {@code minOpacity} tabanı her zaman korunur.
      * </p>
-     *
-     * @param lastSeenY Geminin son "dondurulmuş" Y konumu.
-     * @param sweepY    Sweep çizgisinin mevcut Y konumu.
-     * @return [minOpacity, 1.0] arasında opaklık değeri.
      */
     private float computeOpacity(double lastSeenY, double sweepY) {
         float minOpacity    = config.getMinShipOpacity();
         double distance     = sweepY - lastSeenY;
         double fadeDistance = config.getSweepFadeDistance();
 
+        // Sweep henüz geçmemiş ya da çok uzakta → minimum görünürlük
         if (distance < 0.0 || distance > fadeDistance) {
-            // Sweep henüz geçmedi ya da çok geride → minimum görünürlük
             return minOpacity;
         }
 
-        // Lineer interpolasyon: distance=0 → 1.0f, distance=fadeDistance → minOpacity
+        // Yumuşak (kübik ease-out) sönüm: distance=0 → 1.0, distance=fadeDistance → minOpacity
         float t = (float) (distance / fadeDistance);
-        return minOpacity + (1.0f - minOpacity) * (1.0f - t);
+        // ease-out: 1 - t^2 (karesel, lineer'den daha yavaş solar)
+        float eased = 1.0f - (t * t);
+        return minOpacity + (1.0f - minOpacity) * eased;
     }
 
     // -------------------------------------------------------------------------

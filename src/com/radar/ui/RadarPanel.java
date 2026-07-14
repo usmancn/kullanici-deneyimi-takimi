@@ -74,12 +74,10 @@ public final class RadarPanel extends JPanel {
         capabilities.setSampleBuffers(true);
         capabilities.setNumSamples(4);     // MSAA x4
 
-        // GLCanvas oluşturma
+        // GLCanvas oluşturma — preferred size SABIT değil, layout manager doldurur
         this.glCanvas = new GLCanvas(capabilities);
-        this.glCanvas.setPreferredSize(new Dimension(
-                config.getRadarWidth(),
-                config.getRadarHeight()
-        ));
+        // Minimum kullanılabilir boyut; daha büyük pencerede tam dolar
+        this.glCanvas.setMinimumSize(new Dimension(400, 400));
 
         // Renderer bağlama
         RadarRenderer renderer = new RadarRenderer(config, entityManager);

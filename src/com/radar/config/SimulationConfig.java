@@ -95,9 +95,9 @@ public final class SimulationConfig {
     /**
      * Sweep çizgisi bir geminin üstüne geçtikten sonra gemi kaç piksel
      * yukarı ilerleyene kadar tamamen sönükleşir.
-     * 500 pps → sweep geçtikten sonra ~6 saniye görünür kalir.
+     * Büyük değer → daha uzun süre parlak kalır.
      */
-    private float sweepFadeDistance = 550.0f;
+    private float sweepFadeDistance = 900.0f;
 
     // -------------------------------------------------------------------------
     // Grid (Izgara)
@@ -137,9 +137,9 @@ public final class SimulationConfig {
     /**
      * Sweep çizgisi uzaktayken bile gemilerin sahip olacağı minimum opaklık.
      * 0.0 → tamamen söner; 1.0 → hiç sönmez.
-     * Önerilen: 0.10 – 0.20 arası (her zaman loş da olsa görünür).
+     * Önerilen: 0.25 – 0.40 arası (her zaman loş da olsa belirgin görünür).
      */
-    private float minShipOpacity = 0.12f;
+    private float minShipOpacity = 0.30f;
 
     // -------------------------------------------------------------------------
     // Debug
