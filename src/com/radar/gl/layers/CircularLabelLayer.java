@@ -2,6 +2,7 @@ package com.radar.gl.layers;
 
 import com.radar.gl.core.*;
 import java.awt.Font;
+import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.util.awt.TextRenderer;
 
@@ -19,12 +20,15 @@ public class CircularLabelLayer {
     }
 
     public void draw(GL2 gl, ShaderProgram shader, Camera camera, int width, int height) {
+        if (width <= 0 || height <= 0 || camera.rangeX() <= 0 || camera.rangeY() <= 0) return;
+
         shader.disableAttribs(gl);
+        gl.glBindBuffer(GL.GL_ARRAY_BUFFER, 0); // TextRenderer'in VBO ile cakisip cokmesini engeller
         gl.glUseProgram(0);
 
         text.beginRendering(width, height);
-        // Rengi beyaz yerine acik yesil yapiyoruz (farkli ve guzel gorunmesi icin)
-        text.setColor(0.3f, 0.8f, 0.4f, 0.8f);
+        // Kullanici yazilarin ve cizgilerin beyaz olmasini istedi
+        text.setColor(1.0f, 1.0f, 1.0f, 1.0f);
 
         float cx = Camera.WORLD_SIZE / 2f;
         float cy = Camera.WORLD_SIZE / 2f;
