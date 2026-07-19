@@ -3,7 +3,7 @@ package com.radar.factory;
 import com.radar.config.SimulationConfig;
 import com.radar.sim.engine.EntityManager;
 import com.radar.graphs.CircularGraph;
-import com.radar.graphs.IGraph;
+
 import com.radar.graphs.LineGraph;
 import com.radar.graphs.WaterfallGraph;
 import com.radar.gl.ui.RadarCanvas;
