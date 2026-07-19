@@ -64,14 +64,12 @@ public class Minimap {
         shader.bindPosition(gl, geometry.position.id());
         shader.bindColor(gl, geometry.targetColor.id());
         
-        float FADE_DISTANCE = Camera.WORLD_SIZE * 0.5f;
-
         for (TargetLayer.Blip blip : blips.values()) {
             float distance = scanY - blip.hitScanY;
             if (distance < 0) distance += Camera.WORLD_SIZE;
             
-            float opacity = 1.0f - (distance / FADE_DISTANCE);
-            if (opacity < 0f) opacity = 0f;
+            float opacity = 1.0f - 0.8f * (distance / Camera.WORLD_SIZE);
+            if (opacity < 0.2f) opacity = 0.2f;
 
             shader.setTint(gl, 1f, 1f, 1f, opacity);
             Camera.worldMatrix(matrix, blip.x, blip.y, SQUARE_SIZE, SQUARE_SIZE);

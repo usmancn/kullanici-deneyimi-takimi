@@ -53,9 +53,7 @@ public class TargetLayer {
         shader.bindPosition(gl, geometry.position.id());
         shader.bindColor(gl, geometry.targetColor.id());
 
-        float FADE_DISTANCE = Camera.WORLD_SIZE * 0.5f; // Ekranin yarisina gelince tamamen kaybolsun
-
-        // 2. Hafizadakileri ciz ve eskiyenleri sil
+        // 2. Hafizadakileri ciz (Eski hedefler tamamen silinmez, sadece 0.2 opacity'ye kadar kararir)
         Iterator<Map.Entry<UUID, Blip>> it = memory.entrySet().iterator();
         while (it.hasNext()) {
             Blip blip = it.next().getValue();
@@ -66,14 +64,10 @@ public class TargetLayer {
                 distance += Camera.WORLD_SIZE;
             }
 
-            if (distance > FADE_DISTANCE) {
-                it.remove(); // Cok uzaklasti, hafizadan sil
-                continue;
-            }
+            // En fazla %80 oraninda kararacak (1.0 -> 0.2)
+            float opacity = 1.0f - 0.8f * (distance / Camera.WORLD_SIZE);
+            if (opacity < 0.2f) opacity = 0.2f;
 
-            float opacity = 1.0f - (distance / FADE_DISTANCE);
-            
-            // Parlaklik sönükleşmesi
             shader.setTint(gl, 1.0f, 1.0f, 1.0f, opacity);
 
             camera.modelMatrix(matrix,

@@ -116,8 +116,15 @@ public class RadarCanvas extends GLCanvas implements GLEventListener, IGraph {
         gl.glLineWidth(GL_LINE_WIDTH);
     }
 
+    private long lastFrameTimeNs = 0;
+
     @Override
     public void display(GLAutoDrawable drawable) {
+        long startNs = System.nanoTime();
+        if (lastFrameTimeNs == 0) lastFrameTimeNs = startNs;
+        long totalFrameNs = startNs - lastFrameTimeNs;
+        lastFrameTimeNs = startNs;
+
         GL2 gl = drawable.getGL().getGL2();
         // Minimap'in degistirdigi viewport'u ana ekran icin tekrar tam boyuta getir
         gl.glViewport(0, 0, drawable.getSurfaceWidth(), drawable.getSurfaceHeight());
@@ -135,6 +142,9 @@ public class RadarCanvas extends GLCanvas implements GLEventListener, IGraph {
             minimap.draw(gl, shader, camera, targets.getMemory(), scan.scanY(),
                          drawable.getSurfaceWidth(), drawable.getSurfaceHeight());
         }
+
+        long renderTimeNs = System.nanoTime() - startNs;
+        com.radar.metrics.GpuMetricsProvider.reportRenderTime(renderTimeNs, totalFrameNs);
     }
 
     @Override
