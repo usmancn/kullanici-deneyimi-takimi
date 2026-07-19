@@ -52,6 +52,8 @@ public class LabelLayer {
 
         // Y ekseni: menzil etiketleri
         for (int i = 0; i < Geometry.GRID_FRACTIONS.length; i++) {
+            if (i == 0) continue; // Orijin (0) X ekseninde zaten cizildi
+            
             float fraction = Geometry.GRID_FRACTIONS[i];
             float worldY = minY + fraction * (maxY - minY);
             String yText = formatLabel(worldY);

@@ -48,6 +48,8 @@ public final class MainFrame extends JFrame {
     private final MetricsPanel cpuPanel;
     private final MetricsPanel gpuPanel;
 
+    private final JTabbedPane tabbedPane;
+
     /**
      * @param config        Konfigürasyon; null olamaz.
      * @param entityManager Varlık yöneticisi; null olamaz.
@@ -86,7 +88,7 @@ public final class MainFrame extends JFrame {
         this.gpuPanel = new MetricsPanel(new GpuMetricsProvider(), config);
 
         // --- Sekmeli yapı ---
-        JTabbedPane tabbedPane = buildTabbedPane(
+        this.tabbedPane = buildTabbedPane(
                 radarComp, waterfallComp, circularComp, initialGraph);
         getContentPane().add(tabbedPane);
 
@@ -103,11 +105,18 @@ public final class MainFrame extends JFrame {
      * Pencere görünür hale getirilmeden önce çağrılmalıdır.
      */
     public void startAll() {
-        radarGraph.startGraph();
-        cpuPanel.startUpdating();
-        gpuPanel.startUpdating();
         // Waterfall ve Circular başlangıçta duraksatılır;
-        // sekmeye gelindiğinde ChangeListener devreye alır.
+        // İlk seçili olan grafiğin animasyonunu başlat
+        int sel = tabbedPane.getSelectedIndex();
+        if (sel == 0) radarGraph.startGraph();
+        else if (sel == 1) waterfallGraph.startGraph();
+        else if (sel == 2) circularGraph.startGraph();
+        else if (sel == 3) {
+            // Metrikler sekmesi ile basliyorsak arka planda radar'i calistiralim
+            radarGraph.startGraph();
+            cpuPanel.startUpdating();
+            gpuPanel.startUpdating();
+        }
     }
 
     private void shutdown() {
@@ -167,19 +176,32 @@ public final class MainFrame extends JFrame {
         tabs.addChangeListener(new ChangeListener() {
             private int previous = tabs.getSelectedIndex();
             private final IGraph[] graphs = { radarGraph, waterfallGraph, circularGraph, null };
+            private int activeGraph = (previous == 3) ? 0 : previous; // Metriklerde baslarsa arka planda radar varsayalim
 
             @Override
             public void stateChanged(ChangeEvent e) {
                 int selected = tabs.getSelectedIndex();
 
-                // Önceki sekmenin grafigini durdur
-                if (previous >= 0 && previous < graphs.length && graphs[previous] != null) {
-                    graphs[previous].stopGraph();
+                if (selected != 3) {
+                    // Bir grafiğe geçiş yapıldı
+                    if (activeGraph != selected) {
+                        if (activeGraph >= 0 && activeGraph < graphs.length && graphs[activeGraph] != null) {
+                            graphs[activeGraph].stopGraph();
+                        }
+                        if (selected >= 0 && selected < graphs.length && graphs[selected] != null) {
+                            graphs[selected].startGraph();
+                        }
+                        activeGraph = selected;
+                    }
+                    cpuPanel.stopUpdating();
+                    gpuPanel.stopUpdating();
+                } else {
+                    // Metrikler sekmesine geçildi. 
+                    // Aktif grafiği (ör. Radar) DURDURMUYORUZ ki canlı metrik akışı devam etsin.
+                    cpuPanel.startUpdating();
+                    gpuPanel.startUpdating();
                 }
-                // Yeni sekmenin grafigini başlat
-                if (selected >= 0 && selected < graphs.length && graphs[selected] != null) {
-                    graphs[selected].startGraph();
-                }
+
                 previous = selected;
             }
         });
