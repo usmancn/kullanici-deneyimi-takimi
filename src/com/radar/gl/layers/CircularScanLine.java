@@ -97,6 +97,7 @@ public class CircularScanLine {
         gl.glLineWidth(3f);
         
         gl.glEnableClientState(GL2.GL_VERTEX_ARRAY);
+        gl.glBindBuffer(GL.GL_ARRAY_BUFFER, 0);
         gl.glVertexPointer(2, GL.GL_FLOAT, 0, circleBuffer);
 
         float size = scanRadius * 2f;

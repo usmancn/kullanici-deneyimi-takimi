@@ -59,6 +59,10 @@ public class CircularGridLayer {
         shader.setTint(gl, R, G, B, 0.4f);
         gl.glLineWidth(1f);
         gl.glEnableClientState(GL2.GL_VERTEX_ARRAY);
+        
+        // VBO degil, dogrudan FloatBuffer (Client-side array) kullandigimiz icin 
+        // onceden kalan olasi VBO bind islemini temizlemeliyiz:
+        gl.glBindBuffer(GL.GL_ARRAY_BUFFER, 0);
 
         // -- Ic ice halkalari ciz (Sonar gibi dalga dalga)
         gl.glVertexPointer(2, GL.GL_FLOAT, 0, circleBuffer);

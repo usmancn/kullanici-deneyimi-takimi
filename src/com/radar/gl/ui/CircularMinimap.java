@@ -84,6 +84,7 @@ public class CircularMinimap {
         // tarama dalgasi
         shader.setTint(gl, 0.3f, 1.0f, 0.4f, 0.9f);
         gl.glEnableClientState(GL2.GL_VERTEX_ARRAY);
+        gl.glBindBuffer(GL.GL_ARRAY_BUFFER, 0);
         gl.glVertexPointer(2, GL.GL_FLOAT, 0, circleBuffer);
         
         Camera.worldMatrix(matrix, Camera.WORLD_SIZE / 2f, Camera.WORLD_SIZE / 2f, scanRadius * 2f, scanRadius * 2f);
