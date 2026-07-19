@@ -59,8 +59,8 @@ public class ScanLine {
         float bandStart = scanY;
         float bandEnd   = scanY + (resolution * deltaSec) / SCAN_PERIOD_SEC;
 
+        detected.clear();
         if (bandEnd >= resolution) {
-            detected.clear();
             bandEnd   = bandEnd % resolution;
             bandStart = 0f;
         }

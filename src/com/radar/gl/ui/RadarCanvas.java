@@ -6,7 +6,7 @@ import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.GLCapabilities;
 import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.GLProfile;
-import com.jogamp.opengl.awt.GLCanvas;
+import com.jogamp.opengl.awt.GLJPanel;
 import com.jogamp.opengl.util.FPSAnimator;
 import com.radar.sim.engine.EntityManager;
 import com.radar.gl.core.Camera;
@@ -19,7 +19,10 @@ import com.radar.gl.layers.ScanLine;
 import com.radar.gl.layers.TargetLayer;
 import com.radar.graphs.IGraph;
 
+import javax.swing.*;
 import java.awt.Dimension;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
@@ -28,13 +31,14 @@ import java.awt.event.MouseMotionAdapter;
 import java.awt.event.MouseWheelEvent;
 
 /**
- * Fatih'in VBO/GLCanvas tabanli radar ekrani.
- * Osman'in {@link EntityManager}'i ile konusarak varlik verilerini alir.
- *
- * GLEventListener yasam dongusu: init → display (her kare) → reshape → dispose.
+ * Fatih'in VBO, shader ve JOGL tabanli yuksek performansli radar ekrani.
+ * IGraph arayuzunu uygulayarak MainFrame icinde ortak yapiya katilir.
+ * <p>
+ * Windows/Swing uzerinde ekran olceklenmesi ve High-DPI sorunlarini cozmek
+ * amaciyla GLCanvas yerine GLJPanel kullanilmistir.
  */
 @SuppressWarnings("serial")
-public class RadarCanvas extends GLCanvas implements GLEventListener, IGraph {
+public class RadarCanvas extends GLJPanel implements GLEventListener, IGraph {
 
     private static final int   MSAA_SAMPLES  = 8;
     private static final float GL_LINE_WIDTH  = 2f;
