@@ -113,30 +113,8 @@ public final class Ship implements ISimulationEntity {
 
     @Override
     public void move(double deltaTime) {
-        Vector2D newPos = position.add(velocity.scale(deltaTime));
-
-        double minX = 0.0;
-        double maxX = config.getRadarWidth();
-        double minY = 0.0;
-        double maxY = config.getRadarHeight();
-
-        if (newPos.x < minX || newPos.x > maxX) {
-            velocity = velocity.reflectX();
-            newPos   = new Vector2D(
-                    Math.max(minX, Math.min(maxX, newPos.x)),
-                    newPos.y
-            );
-        }
-
-        if (newPos.y < minY || newPos.y > maxY) {
-            velocity = velocity.reflectY();
-            newPos   = new Vector2D(
-                    newPos.x,
-                    Math.max(minY, Math.min(maxY, newPos.y))
-            );
-        }
-
-        position = newPos;
+        // Kullanici istegi uzerine gemilerin hareket etmesi gecici olarak durduruldu.
+        // Gemiler rastgele dogduklari yerde sabit kalacaklar.
     }
 
     @Override

@@ -52,11 +52,14 @@ public class TargetLayer {
                 blip.y = (float) pos.y;
                 blip.trail.add(new float[]{blip.x, blip.y});
             } else {
-                // ScanLine'in bandi her frame'de tamamen ilerledigi icin
-                // detected listesine giren her gemi kesinlikle yeni bir sweep'tir.
-                blip.trail.add(new float[]{blip.x, blip.y});
-                if (blip.trail.size() > 15) {
-                    blip.trail.remove(0);
+                // Eger gemi hareket etmisse ize ekle. 
+                // Sabit duran gemiler icin ayni noktayi 15 kere ust uste eklemek 
+                // opacity (saydamlik) birikmesine yol acar ve geminin sonuklesmesini engeller.
+                if (Math.abs(blip.x - pos.x) > 0.5f || Math.abs(blip.y - pos.y) > 0.5f) {
+                    blip.trail.add(new float[]{blip.x, blip.y});
+                    if (blip.trail.size() > 15) {
+                        blip.trail.remove(0);
+                    }
                 }
                 blip.x = (float) pos.x;
                 blip.y = (float) pos.y;
