@@ -119,18 +119,20 @@ public class RadarCanvas extends GLCanvas implements GLEventListener, IGraph {
     @Override
     public void display(GLAutoDrawable drawable) {
         GL2 gl = drawable.getGL().getGL2();
+        // Minimap'in degistirdigi viewport'u ana ekran icin tekrar tam boyuta getir
+        gl.glViewport(0, 0, drawable.getSurfaceWidth(), drawable.getSurfaceHeight());
         gl.glClear(GL.GL_COLOR_BUFFER_BIT);
 
         scan.advance();
 
         grid.draw(gl, shader);
-        targets.draw(gl, shader, camera, scan.detected());
+        targets.draw(gl, shader, camera, scan.detected(), scan.scanY());
         scan.draw(gl, shader, camera);
         markLayer.draw(gl, shader, camera);
         labels.draw(gl, shader, camera, getWidth(), getHeight());
 
         if (minimapVisible) {
-            minimap.draw(gl, shader, camera, scan.detected(), scan.scanY(),
+            minimap.draw(gl, shader, camera, targets.getMemory(), scan.scanY(),
                          drawable.getSurfaceWidth(), drawable.getSurfaceHeight());
         }
     }

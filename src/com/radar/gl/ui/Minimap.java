@@ -8,9 +8,10 @@ import com.radar.gl.core.Geometry;
 import com.radar.gl.core.GlBuffer;
 import com.radar.gl.core.ShaderProgram;
 import com.radar.gl.core.TargetGeometry;
+import com.radar.gl.layers.TargetLayer;
 import com.radar.sim.model.Vector2D;
 
-import java.util.List;
+import java.util.Map;
 
 /**
  * Sol ustte, ayri viewport'ta tum dunyayi gosteren minimap.
@@ -42,11 +43,11 @@ public class Minimap {
     }
 
     public void draw(GL2 gl, ShaderProgram shader, Camera camera,
-                     List<ISimulationEntity> detected, float scanY,
+                     Map<java.util.UUID, TargetLayer.Blip> blips, float scanY,
                      int surfaceWidth, int surfaceHeight) {
 
-        int minimapWidth  = Math.round(surfaceWidth  * FRACTION);
-        int minimapHeight = Math.round(surfaceHeight * FRACTION);
+        int minimapWidth = surfaceWidth / 5;
+        int minimapHeight = surfaceWidth / 5;
         int minimapX = 0;
         int minimapY = surfaceHeight - minimapHeight;
 
@@ -62,11 +63,18 @@ public class Minimap {
         // hedefler
         shader.bindPosition(gl, geometry.position.id());
         shader.bindColor(gl, geometry.targetColor.id());
-        for (int i = 0; i < detected.size(); i++) {
-            ISimulationEntity entity = detected.get(i);
-            Vector2D pos = entity.getPosition();
-            shader.setTint(gl, 1f, 1f, 1f, 1f);
-            Camera.worldMatrix(matrix, (float) pos.x, (float) pos.y, SQUARE_SIZE, SQUARE_SIZE);
+        
+        float FADE_DISTANCE = Camera.WORLD_SIZE * 0.5f;
+
+        for (TargetLayer.Blip blip : blips.values()) {
+            float distance = scanY - blip.hitScanY;
+            if (distance < 0) distance += Camera.WORLD_SIZE;
+            
+            float opacity = 1.0f - (distance / FADE_DISTANCE);
+            if (opacity < 0f) opacity = 0f;
+
+            shader.setTint(gl, 1f, 1f, 1f, opacity);
+            Camera.worldMatrix(matrix, blip.x, blip.y, SQUARE_SIZE, SQUARE_SIZE);
             shader.setMatrix(gl, matrix);
             gl.glDrawArrays(GL.GL_TRIANGLES, 0, Geometry.TARGET_VERTEX_COUNT);
         }
