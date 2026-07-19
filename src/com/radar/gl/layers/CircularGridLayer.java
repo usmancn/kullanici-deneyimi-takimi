@@ -50,7 +50,7 @@ public class CircularGridLayer {
     public void draw(GL2 gl, ShaderProgram shader, Camera camera) {
         float cx = Camera.WORLD_SIZE / 2f;
         float cy = Camera.WORLD_SIZE / 2f;
-        float maxRadius = Camera.WORLD_SIZE / 2f;
+        float maxRadius = Camera.WORLD_SIZE / 2f * 0.92f;
 
         // Renk: Cizgilerin x y ekseni gibi beyaz ve belirgin olmasi istendi
         shader.setTint(gl, 1.0f, 1.0f, 1.0f, 0.4f);

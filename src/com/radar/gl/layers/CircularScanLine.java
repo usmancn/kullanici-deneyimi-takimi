@@ -49,7 +49,7 @@ public class CircularScanLine {
         float deltaSec = (now - lastTimeNs) / 1_000_000_000f;
         lastTimeNs = now;
 
-        float maxRadius = Camera.WORLD_SIZE / 2f;
+        float maxRadius = Camera.WORLD_SIZE / 2f * 0.92f;
         float speed = maxRadius / SCAN_PERIOD_SEC;
         
         float prevRadius = scanRadius;

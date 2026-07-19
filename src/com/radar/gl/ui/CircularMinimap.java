@@ -73,7 +73,7 @@ public class CircularMinimap {
         shader.bindPosition(gl, geometry.position.id());
         shader.bindColor(gl, geometry.targetColor.id());
         
-        float maxRadius = Camera.WORLD_SIZE / 2f;
+        float maxRadius = Camera.WORLD_SIZE / 2f * 0.92f;
 
         for (CircularTargetLayer.CircularBlip blip : blips.values()) {
             float distance = scanRadius - blip.hitRadius;

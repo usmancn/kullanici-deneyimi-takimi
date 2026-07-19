@@ -41,7 +41,7 @@ public class CircularTargetLayer {
                      
         float cx = Camera.WORLD_SIZE / 2f;
         float cy = Camera.WORLD_SIZE / 2f;
-        float maxRadius = Camera.WORLD_SIZE / 2f;
+        float maxRadius = Camera.WORLD_SIZE / 2f * 0.92f;
 
         // Vurulanlari guncelle
         for (int i = 0; i < detected.size(); i++) {
