@@ -96,16 +96,12 @@ public class CircularScanLine {
         shader.setTint(gl, 0.3f, 1.0f, 0.4f, 0.9f); // Fatih'in dalga rengi
         gl.glLineWidth(3f);
         
-        gl.glEnableClientState(GL2.GL_VERTEX_ARRAY);
-        gl.glBindBuffer(GL.GL_ARRAY_BUFFER, 0);
-        gl.glVertexPointer(2, GL.GL_FLOAT, 0, circleBuffer);
+        shader.bindPositionOnly(gl, circleBuffer, 2);
 
         float size = scanRadius * 2f;
         camera.modelMatrix(matrix, cx, cy, size, size);
         shader.setMatrix(gl, matrix);
         
         gl.glDrawArrays(GL.GL_LINE_LOOP, 0, CIRCLE_STEP);
-
-        gl.glDisableClientState(GL2.GL_VERTEX_ARRAY);
     }
 }

@@ -58,14 +58,8 @@ public class CircularGridLayer {
 
         shader.setTint(gl, R, G, B, 0.4f);
         gl.glLineWidth(1f);
-        gl.glEnableClientState(GL2.GL_VERTEX_ARRAY);
-        
-        // VBO degil, dogrudan FloatBuffer (Client-side array) kullandigimiz icin 
-        // onceden kalan olasi VBO bind islemini temizlemeliyiz:
-        gl.glBindBuffer(GL.GL_ARRAY_BUFFER, 0);
-
         // -- Ic ice halkalari ciz (Sonar gibi dalga dalga)
-        gl.glVertexPointer(2, GL.GL_FLOAT, 0, circleBuffer);
+        shader.bindPositionOnly(gl, circleBuffer, 2);
         
         // Fatih'in kodundaki gibi 4 halka (1.0, 0.75, 0.50, 0.25 oranlarinda)
         for(float i = 1f; i > 0; i -= 0.25f) {
@@ -76,12 +70,10 @@ public class CircularGridLayer {
         }
 
         // -- Radyal (Aci) cizgilerini ciz
-        gl.glVertexPointer(2, GL.GL_FLOAT, 0, lineBuffer);
+        shader.bindPositionOnly(gl, lineBuffer, 2);
         camera.modelMatrix(matrix, 0, 0, Camera.WORLD_SIZE, Camera.WORLD_SIZE);
         shader.setMatrix(gl, matrix);
         gl.glDrawArrays(GL.GL_LINES, 0, RADIAL_LINES * 2);
-
-        gl.glDisableClientState(GL2.GL_VERTEX_ARRAY);
     }
     
     public FloatBuffer getCircleBuffer() {

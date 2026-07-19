@@ -1,6 +1,4 @@
-package com.radar.gl.core;
-
-
+package deneme.radar.gl;
 
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
@@ -87,27 +85,14 @@ public class ShaderProgram {
 
     /** VBO'yu pozisyon attribute'una baglar (3 float / vertex). */
     public void bindPosition(GL2 gl, int bufferId) {
-        gl.glEnableVertexAttribArray(attribPosition);
         gl.glBindBuffer(GL.GL_ARRAY_BUFFER, bufferId);
         gl.glVertexAttribPointer(attribPosition, 3, GL.GL_FLOAT, false, 0, 0L);
     }
 
     /** VBO'yu renk attribute'una baglar (3 float / vertex). */
     public void bindColor(GL2 gl, int bufferId) {
-        gl.glEnableVertexAttribArray(attribColor);
         gl.glBindBuffer(GL.GL_ARRAY_BUFFER, bufferId);
         gl.glVertexAttribPointer(attribColor, 3, GL.GL_FLOAT, false, 0, 0L);
-    }
-    
-    /** RAM'deki bir FloatBuffer'i (VBO olmadan) pozisyon olarak baglar ve renk attribute'unu devre disi birakir. */
-    public void bindPositionOnly(GL2 gl, java.nio.FloatBuffer buffer, int components) {
-        gl.glBindBuffer(GL.GL_ARRAY_BUFFER, 0);
-        gl.glEnableVertexAttribArray(attribPosition);
-        gl.glVertexAttribPointer(attribPosition, components, GL.GL_FLOAT, false, 0, buffer);
-        
-        gl.glDisableVertexAttribArray(attribColor);
-        // Renk kapaliyken default inColor (1,1,1,1) olsun ki tint uniform'u calissin
-        gl.glVertexAttrib4f(attribColor, 1.0f, 1.0f, 1.0f, 1.0f);
     }
 
     public void setMatrix(GL2 gl, float[] matrix) {
