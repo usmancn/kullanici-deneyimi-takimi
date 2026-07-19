@@ -25,7 +25,7 @@ public class LineGraph extends JPanel implements IGraph {
     /** Simülasyon konfigurasyonu; grafik parametreleri buradan alinabilir. */
     protected final SimulationConfig config;
 
-    /** Osman'in varlik yoneticisi; hedeflerin konumlari buradan alinir. */
+    /** Varlik yoneticisi; hedeflerin konumlari buradan alinir. */
     protected final EntityManager entityManager;
 
     /**

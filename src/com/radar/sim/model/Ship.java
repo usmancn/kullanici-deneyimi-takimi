@@ -7,35 +7,8 @@ import java.util.Random;
 import java.util.UUID;
 
 /**
- * Simülasyon sahnesindeki bir gemiyi temsil eder.
- *
- * <p><b>Hareket:</b> Gemi sürekli hareket eder; simülasyon thread'i her tick'te
- * pozisyonu günceller. Alan sınırlarına çarptığında yansıma yapar.
- *
- * <p><b>Klasik Radar Davranışı (Freeze-on-Sweep):</b><br>
- * Gerçek radarlarda gemiler sürekli hareket eder, ancak radar ekranı yalnızca
- * sweep çizgisinin o noktaya geçtiği andaki konumu gösterir. Bu sınıf bu davranışı
- * taklit eder:
- * <ol>
- *   <li>Sweep çizgisi geminin üzerinden geçtiği anda {@code lastSeenPosition} güncellenir
- *       (geminin o anki gerçek konumu kaydedilir).</li>
- *   <li>Sonraki render'larda gemi, {@code lastSeenPosition}'da çizilir.</li>
- *   <li>Sweep bir sonraki turda tekrar geçtiğinde konum yenilenir.</li>
- * </ol>
- * Bu yaklaşım, sweep döngüleri arasında geminin "yerinde donmuş" görünmesini sağlar;
- * sonraki sweep ile birden yeni konuma atlayan görüntü gerçek radar ekranlarına
- * özgü karakteristik görünümdür.
- *
- *
- * <p><b>Minimum Opaklık:</b> Sweep uzakta olsa bile gemi,
- * {@link SimulationConfig#getMinShipOpacity()} değerinin altına düşmez.
- * Bu sayede tüm gemiler her zaman loş da olsa görünür kalır;
- * yalnızca sweep'e yakın olanlar daha parlak gösterilir.
- *
- * <p><b>Thread güvenliği:</b><br>
- * {@code position} ve {@code velocity} → {@code volatile}, her iki thread'den okunabilir.<br>
- * {@code lastSeenPosition} ve {@code prevSweepY} → yalnızca JOGL render thread'inden
- * erişilir ({@code render()} içinde), senkronizasyon gerekmez.
+ * Simülasyon sahnesindeki hareketli hedefi (gemi) temsil eder.
+ * Temel pozisyon, hız ve kimlik verilerini barındırır.
  */
 public final class Ship implements ISimulationEntity {
 

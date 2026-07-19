@@ -7,17 +7,8 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * Simülasyon sahnedeki tüm varlıkları ({@link ISimulationEntity}) yöneten sınıf.
- *
- * <p><b>Thread güvenliği:</b> Dahili liste olarak {@link CopyOnWriteArrayList}
- * kullanılır. Bu sayede:
- * <ul>
- *   <li>Simülasyon thread'i listeye yeni varlık ekleyebilir / ölü olanları kaldırabilir.</li>
- *   <li>JOGL render thread'i iterasyon sırasında {@code ConcurrentModificationException}
- *       almadan listeyi okuyabilir.</li>
- * </ul>
- * Yazma işlemleri nadir olduğundan (yalnızca spawn ve temizleme) bu yapının
- * getirdiği kopyalama maliyeti kabul edilebilir düzeydedir.
+ * Sahnede bulunan tüm varlıkları ({@link ISimulationEntity}) yönetir.
+ * Thread-safe yapısıyla motor ve çizim iş parçacıkları arasında güvenli veri akışı sağlar.
  */
 public final class EntityManager {
 

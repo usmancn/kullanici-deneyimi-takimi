@@ -23,13 +23,13 @@ public final class GraphFactory {
 
     /** Desteklenen grafik turleri. */
     public enum GraphType {
-        /** Fatih'in VBO/GLCanvas tabanli radar ekrani. */
+        /** VBO/GLCanvas tabanli radar ekrani. */
         RADAR,
-        /** Selaleli (Waterfall) grafik — Fatih. */
+        /** Selaleli (Waterfall) grafik. */
         WATERFALL,
-        /** Dairesel (Circular) grafik — Altay. */
+        /** Dairesel (Circular) grafik. */
         CIRCULAR,
-        /** Cizgi (Line) grafik — Ortak. */
+        /** Cizgi (Line) grafik. */
         LINE
     }
 

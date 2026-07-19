@@ -28,8 +28,8 @@ import java.awt.event.MouseMotionAdapter;
 import java.awt.event.MouseWheelEvent;
 
 /**
- * Fatih'in VBO/GLCanvas tabanli radar ekrani.
- * Osman'in EntityManager'i ile konusarak varlik verilerini alir.
+ * VBO/GLCanvas tabanli radar ekrani.
+ * EntityManager ile haberleserek varlik verilerini alir.
  */
 @SuppressWarnings("serial")
 public class RadarCanvas extends GLCanvas implements GLEventListener, IGraph {
@@ -69,7 +69,7 @@ public class RadarCanvas extends GLCanvas implements GLEventListener, IGraph {
 
     /**
      * @param frequency    Hedef kare hizi (FPS).
-     * @param entityManager Osman'in varlik yoneticisi; null olamaz.
+     * @param entityManager Varlik yoneticisi; null olamaz.
      */
     public RadarCanvas(int frequency, EntityManager entityManager) {
         super(caps());

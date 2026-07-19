@@ -12,24 +12,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Simülasyonun mantık döngüsünü belirli bir frekans (Hz) ile çalıştıran motor.
- *
- * <p><b>Sorumluluklar:</b>
- * <ul>
- *   <li>Her tick'te {@link EntityManager} üzerindeki tüm varlıkları günceller.</li>
- *   <li>Sahne varlık sayısı {@link SimulationConfig#getMaxShipCount()} değerinin
- *       altına düştüğünde otomatik olarak yeni {@link Ship} üretir.</li>
- *   <li>Ölü varlıkları listeden temizler.</li>
- * </ul>
- *
- *
- * <p><b>Thread modeli:</b> Motor kendi {@link ScheduledExecutorService}'ini (tek thread)
- * yönetir. JOGL render döngüsü ile tamamen bağımsız çalışır; ikisi arasındaki
- * paylaşım {@link EntityManager} üzerinden thread-safe biçimde gerçekleşir.
- *
- * <p><b>Delta-time hesabı:</b> Planlanan periyot ile gerçek geçen süre arasındaki
- * fark {@code System.nanoTime()} kullanılarak ölçülür ve {@code update(deltaTime)}
- * çağrılarına aktarılır. Bu sayede hareket hesapları kare hızından bağımsız kalır.
+ * Simülasyon döngüsünü bağımsız bir thread üzerinde çalıştıran motor.
+ * Varlıkların hareketini (delta-time bazlı) ve yaşam döngüsünü yönetir.
  */
 public final class SimulationEngine {
 

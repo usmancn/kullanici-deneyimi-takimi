@@ -17,7 +17,7 @@ import java.util.UUID;
 
 /**
  * Tarama cizgisinin gordugu hedefleri VBO ile yuksek hizda cizer.
- * Veriyi Osman'in EntityManager'indan gelen {@link ISimulationEntity} listesinden alir.
+ * Veriyi EntityManager'dan gelen {@link ISimulationEntity} listesinden alir.
  * Gemilerin donma (freeze) ve mesafeye bagli sönüklesme (distance fade) mantigini yonetir.
  */
 public class TargetLayer {

@@ -14,7 +14,7 @@ import java.util.List;
 
 /**
  * Asagidan yukari suzulen tarama cizgisi.
- * Varliklari Osman'in {@link EntityManager}'indan alir (Fatih'in Simulation yerine).
+ * Varliklari {@link EntityManager}'dan alir.
  */
 public class ScanLine {
 
