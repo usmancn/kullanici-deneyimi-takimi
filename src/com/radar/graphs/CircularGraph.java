@@ -181,7 +181,6 @@ public class CircularGraph extends GLCanvas implements GLEventListener, IGraph {
 
         if (height == 0) height = 1;
         float aspect = (float) width / height;
-        float currentCenterY = camera.centerY();
         float currentCenterX = camera.centerX();
         float rangeY = camera.rangeY();
         float newRangeX = rangeY * aspect;
