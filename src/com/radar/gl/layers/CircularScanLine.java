@@ -13,7 +13,7 @@ import java.util.List;
 
 /**
  * Sonar Ripple: Dairesel radarda merkezden dista dogru buyuyen dalga.
- * Fatih'in "SecondGraph" mantigina birebir uygundur.
+ * Dairesel radar tasarimina uygun calisir.
  */
 public class CircularScanLine {
 
@@ -93,7 +93,7 @@ public class CircularScanLine {
         float cx = Camera.WORLD_SIZE / 2f;
         float cy = Camera.WORLD_SIZE / 2f;
 
-        shader.setTint(gl, 0.3f, 1.0f, 0.4f, 0.9f); // Fatih'in dalga rengi
+        shader.setTint(gl, 0.3f, 1.0f, 0.4f, 0.9f); // Belirlenen tarama dalgasi rengi
         gl.glLineWidth(3f);
         
         shader.bindPositionOnly(gl, circleBuffer, 2);

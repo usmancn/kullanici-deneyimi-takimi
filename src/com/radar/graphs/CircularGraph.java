@@ -33,7 +33,7 @@ import java.awt.event.MouseWheelEvent;
 
 /**
  * Dairesel (Sonar Ripple) grafik.
- * Fatih'in disari dogru buyuyen dalga mantigini ve VBO optimizasyonlarini kullanir.
+ * Merkezden dista dogru buyuyen dairesel dalga mantigini ve VBO optimizasyonlarini kullanir.
  */
 @SuppressWarnings("serial")
 public class CircularGraph extends GLCanvas implements GLEventListener, IGraph {

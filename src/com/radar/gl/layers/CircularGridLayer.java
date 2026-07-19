@@ -54,7 +54,7 @@ public class CircularGridLayer {
         // -- Ic ice halkalari ciz (Sonar gibi dalga dalga)
         shader.bindPositionOnly(gl, circleBuffer, 2);
         
-        // Fatih'in kodundaki gibi 4 halka (1.0, 0.75, 0.50, 0.25 oranlarinda)
+        // Referans tasarimdaki gibi 4 halka (1.0, 0.75, 0.50, 0.25 oranlarinda)
         for(float i = 1f; i > 0; i -= 0.25f) {
             float size = maxRadius * 2f * i;
             camera.modelMatrix(matrix, cx, cy, size, size);
