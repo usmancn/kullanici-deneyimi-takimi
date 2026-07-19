@@ -1,6 +1,5 @@
 package com.radar.app;
 
-import com.radar.factory.GraphFactory.GraphType;
 
 /**
  * Uygulamanın giriş noktası.

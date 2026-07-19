@@ -19,10 +19,7 @@ import com.radar.gl.layers.ScanLine;
 import com.radar.gl.layers.TargetLayer;
 import com.radar.graphs.IGraph;
 
-import javax.swing.*;
-import java.awt.Dimension;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
+
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
@@ -268,9 +265,10 @@ public class RadarCanvas extends GLCanvas implements GLEventListener, IGraph {
         addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
-                if      (e.getKeyCode() == KeyEvent.VK_M)         markController.setMarkKeyDown(true);
-                else if (e.getKeyCode() == KeyEvent.VK_TAB)       minimapVisible = !minimapVisible;
+                if      (e.getKeyCode() == KeyEvent.VK_M)          markController.setMarkKeyDown(true);
+                else if (e.getKeyCode() == KeyEvent.VK_TAB)        minimapVisible = !minimapVisible;
                 else if (e.getKeyCode() == KeyEvent.VK_BACK_SPACE) markController.removeSelected();
+                else if (e.getKeyCode() == KeyEvent.VK_C)          markController.clearAll();
             }
             @Override
             public void keyReleased(KeyEvent e) {

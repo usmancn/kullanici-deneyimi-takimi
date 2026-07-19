@@ -40,6 +40,11 @@ public class MarkController {
         }
     }
 
+    public void clearAll() {
+        marks.clear();
+        selected = -1;
+    }
+
     /** Cemberin kenarina yeterince yakin tik varsa o isaretin indeksi; yoksa -1. */
     private int pick(float worldX, float worldY) {
         for (int i = 0; i < marks.size(); i++) {
