@@ -138,7 +138,11 @@ public final class MainFrame extends JFrame {
         // Metrik paneli: CPU + GPU yan yana
         MetricsSplitPanel metricsPanel = new MetricsSplitPanel(cpuPanel, gpuPanel);
 
-        tabs.addTab(TAB_RADAR,     radarComp);
+        // AWT GLCanvas bileşeninin Swing içinde düzgün boyutlanması için JPanel (BorderLayout) ile sarıyoruz
+        javax.swing.JPanel radarWrapper = new javax.swing.JPanel(new java.awt.BorderLayout());
+        radarWrapper.add(radarComp, java.awt.BorderLayout.CENTER);
+
+        tabs.addTab(TAB_RADAR,     radarWrapper);
         tabs.addTab(TAB_WATERFALL, waterfallComp);
         tabs.addTab(TAB_CIRCULAR,  circularComp);
         tabs.addTab(TAB_METRICS,   metricsPanel);

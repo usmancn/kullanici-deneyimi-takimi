@@ -6,7 +6,7 @@ import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.GLCapabilities;
 import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.GLProfile;
-import com.jogamp.opengl.awt.GLJPanel;
+import com.jogamp.opengl.awt.GLCanvas;
 import com.jogamp.opengl.util.FPSAnimator;
 import com.radar.sim.engine.EntityManager;
 import com.radar.gl.core.Camera;
@@ -31,14 +31,11 @@ import java.awt.event.MouseMotionAdapter;
 import java.awt.event.MouseWheelEvent;
 
 /**
- * Fatih'in VBO, shader ve JOGL tabanli yuksek performansli radar ekrani.
- * IGraph arayuzunu uygulayarak MainFrame icinde ortak yapiya katilir.
- * <p>
- * Windows/Swing uzerinde ekran olceklenmesi ve High-DPI sorunlarini cozmek
- * amaciyla GLCanvas yerine GLJPanel kullanilmistir.
+ * Fatih'in VBO/GLCanvas tabanli radar ekrani.
+ * Osman'in EntityManager'i ile konusarak varlik verilerini alir.
  */
 @SuppressWarnings("serial")
-public class RadarCanvas extends GLJPanel implements GLEventListener, IGraph {
+public class RadarCanvas extends GLCanvas implements GLEventListener, IGraph {
 
     private static final int   MSAA_SAMPLES  = 8;
     private static final float GL_LINE_WIDTH  = 2f;
@@ -91,7 +88,6 @@ public class RadarCanvas extends GLJPanel implements GLEventListener, IGraph {
         this.pan               = new PanController(camera);
         this.minimapController = new MinimapController(camera);
 
-        setPreferredSize(new Dimension((int) Camera.WORLD_SIZE, (int) Camera.WORLD_SIZE));
         addGLEventListener(this);
         installInputHandlers();
         start(frequency);
