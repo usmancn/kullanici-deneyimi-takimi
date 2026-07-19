@@ -1,7 +1,6 @@
 package com.radar.ui;
 
-import com.radar.app.RadarLibrary;
-import com.radar.factory.GraphFactory.GraphType;
+
 
 import javax.swing.*;
 import java.awt.*;
