@@ -2,14 +2,14 @@ package com.radar.gl.ui;
 
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
-import com.radar.sim.core.ISimulationEntity;
+
 import com.radar.gl.core.Camera;
 import com.radar.gl.core.Geometry;
 import com.radar.gl.core.GlBuffer;
 import com.radar.gl.core.ShaderProgram;
 import com.radar.gl.core.TargetGeometry;
 import com.radar.gl.layers.TargetLayer;
-import com.radar.sim.model.Vector2D;
+
 
 import java.util.Map;
 
