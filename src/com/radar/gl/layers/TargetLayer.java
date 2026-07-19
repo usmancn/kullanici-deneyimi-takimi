@@ -52,18 +52,14 @@ public class TargetLayer {
                 blip.y = (float) pos.y;
                 blip.trail.add(new float[]{blip.x, blip.y});
             } else {
-                float distSinceLastHit = currentScanY - blip.hitScanY;
-                if (distSinceLastHit < 0) distSinceLastHit += Camera.WORLD_SIZE;
-                
-                // Yeni bir sweep ulastiginda gecmis pozisyonu ize ekle
-                if (distSinceLastHit > 50f) {
-                    blip.trail.add(new float[]{blip.x, blip.y});
-                    if (blip.trail.size() > 15) {
-                        blip.trail.remove(0);
-                    }
-                    blip.x = (float) pos.x;
-                    blip.y = (float) pos.y;
+                // ScanLine'in bandi her frame'de tamamen ilerledigi icin
+                // detected listesine giren her gemi kesinlikle yeni bir sweep'tir.
+                blip.trail.add(new float[]{blip.x, blip.y});
+                if (blip.trail.size() > 15) {
+                    blip.trail.remove(0);
                 }
+                blip.x = (float) pos.x;
+                blip.y = (float) pos.y;
             }
             blip.hitScanY = currentScanY;
         }
