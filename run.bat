@@ -25,7 +25,7 @@ echo Gemi Radar Simulasyonu baslatiliyor...
 %JAVA_CMD% ^
     -Djava.library.path=lib ^
     -cp "out;lib\*" ^
-    com.radar.Main
+    com.radar.app.Main
 
 if %ERRORLEVEL% NEQ 0 (
     echo.
