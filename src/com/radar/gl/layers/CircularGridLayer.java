@@ -68,7 +68,7 @@ public class CircularGridLayer {
 
         // -- Radyal (Aci) cizgilerini ciz
         shader.bindPositionOnly(gl, lineBuffer, 2);
-        camera.modelMatrix(matrix, cx, cy, Camera.WORLD_SIZE, Camera.WORLD_SIZE);
+        camera.modelMatrix(matrix, cx, cy, maxRadius * 2f, maxRadius * 2f);
         shader.setMatrix(gl, matrix);
         gl.glDrawArrays(GL.GL_LINES, 0, RADIAL_LINES * 2);
     }
