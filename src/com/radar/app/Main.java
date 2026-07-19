@@ -33,7 +33,7 @@ public class Main {
                     .withShipCount(dialog.getShipCount())
                     .withFrequency(dialog.getFps())
                     .withRadarSpeed(dialog.getRadarSpeed())
-                    .withGraph(GraphType.RADAR)
+                    .withGraph(dialog.getSelectedGraph())
                     .start();
         } else {
             System.out.println("Simülasyon başlatılmadan çıkıldı.");
