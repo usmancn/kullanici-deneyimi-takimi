@@ -16,6 +16,7 @@ import com.radar.gl.core.TargetGeometry;
 import com.radar.gl.layers.CircularGridLayer;
 import com.radar.gl.layers.CircularScanLine;
 import com.radar.gl.layers.CircularTargetLayer;
+import com.radar.gl.layers.CircularLabelLayer;
 import com.radar.gl.layers.MarkLayer;
 import com.radar.gl.ui.MarkController;
 import com.radar.gl.ui.CircularMinimap;
@@ -47,6 +48,7 @@ public class CircularGraph extends GLCanvas implements GLEventListener, IGraph {
     private final CircularGridLayer grid;
     private final CircularScanLine scan;
     private final CircularTargetLayer targets;
+    private final CircularLabelLayer labels;
     
     private final MarkLayer markLayer;
     private final CircularMinimap minimap;
@@ -67,6 +69,7 @@ public class CircularGraph extends GLCanvas implements GLEventListener, IGraph {
         this.grid = new CircularGridLayer();
         this.scan = new CircularScanLine(entityManager, grid.getCircleBuffer());
         this.targets = new CircularTargetLayer(targetGeometry);
+        this.labels = new CircularLabelLayer();
         
         this.markLayer = new MarkLayer(markController);
         this.minimap = new CircularMinimap(targetGeometry);
@@ -122,6 +125,7 @@ public class CircularGraph extends GLCanvas implements GLEventListener, IGraph {
         targetGeometry.init(gl);
         minimap.init(gl);
         markLayer.init(gl);
+        labels.init(gl);
     }
 
     @Override
@@ -131,6 +135,7 @@ public class CircularGraph extends GLCanvas implements GLEventListener, IGraph {
         targetGeometry.dispose(gl);
         markLayer.dispose(gl);
         minimap.dispose(gl);
+        labels.dispose(gl);
     }
 
     @Override
@@ -146,6 +151,7 @@ public class CircularGraph extends GLCanvas implements GLEventListener, IGraph {
         targets.draw(gl, shader, camera, scan.detected(), scan.scanRadius());
         scan.draw(gl, shader, camera);
         markLayer.draw(gl, shader, camera);
+        labels.draw(gl, shader, camera, getWidth(), getHeight());
         
         if (minimapVisible) {
             minimap.draw(gl, shader, camera, targets.getMemory(), scan.scanRadius(), getWidth(), getHeight(), grid.getCircleBuffer());
@@ -158,6 +164,14 @@ public class CircularGraph extends GLCanvas implements GLEventListener, IGraph {
     public void reshape(GLAutoDrawable drawable, int x, int y, int width, int height) {
         GL2 gl = drawable.getGL().getGL2();
         gl.glViewport(0, 0, width, height);
+
+        if (height == 0) height = 1;
+        float aspect = (float) width / height;
+        float currentCenterY = camera.centerY();
+        float currentCenterX = camera.centerX();
+        float rangeY = camera.rangeY();
+        float newRangeX = rangeY * aspect;
+        camera.setRangeX(currentCenterX - newRangeX / 2f, currentCenterX + newRangeX / 2f);
     }
     
     private void installInputHandlers() {

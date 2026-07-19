@@ -38,15 +38,11 @@ public class CircularGridLayer {
 
         // 2. Aci Cizgileri (Merkezden distaki cembere kadar)
         lineBuffer = Buffers.newDirectFloatBuffer(RADIAL_LINES * 4);
-        float cx = Camera.WORLD_SIZE / 2f;
-        float cy = Camera.WORLD_SIZE / 2f;
-        float maxRadius = Camera.WORLD_SIZE / 2f;
-        
         for (int i = 0; i < RADIAL_LINES; i++) {
             double angle = 2.0 * Math.PI * i / RADIAL_LINES;
-            lineBuffer.put(cx).put(cy);
-            lineBuffer.put(cx + maxRadius * (float) Math.cos(angle));
-            lineBuffer.put(cy + maxRadius * (float) Math.sin(angle));
+            lineBuffer.put(0f).put(0f);
+            lineBuffer.put((float) Math.cos(angle));
+            lineBuffer.put((float) Math.sin(angle));
         }
         lineBuffer.flip();
     }
