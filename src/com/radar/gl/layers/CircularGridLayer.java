@@ -21,10 +21,6 @@ public class CircularGridLayer {
     private static final int CIRCLE_STEP = 128;
     private static final int RADIAL_LINES = 12;
 
-    // Renk: Fatih'in koyu yesil / parlak grid rengi
-    private static final float R = 0.05f;
-    private static final float G = 0.35f;
-    private static final float B = 0.15f;
 
     public CircularGridLayer() {
         // 1. Cember Vertex'leri (Yaricap 1, Merkez 0,0)

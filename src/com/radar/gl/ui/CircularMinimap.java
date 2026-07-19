@@ -24,8 +24,6 @@ public class CircularMinimap {
     private static final float SQUARE_SIZE    = 10f;
     private static final float RECT_INSET     = 6f;
 
-    private static final float BG_R = 0.01f, BG_G = 0.09f, BG_B = 0.05f;
-    private static final float MAIN_BG_R = 0.02f, MAIN_BG_G = 0.15f, MAIN_BG_B = 0.08f;
 
     private final TargetGeometry geometry;
     private final GlBuffer rectPosition = new GlBuffer();

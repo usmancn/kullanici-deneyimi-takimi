@@ -94,7 +94,6 @@ public class CircularLabelLayer {
             int pixelY = Math.round((camera.maxY() - worldY) / camera.rangeY() * height);
             
             String lbl = String.valueOf(Math.round(maxRadius * r));
-            int textHeight = Math.round((float) text.getBounds(lbl).getHeight());
             
             // Yazi cizginin biraz ustunde dursun
             text.draw(lbl, pixelX + PADDING, height - pixelY + PADDING);
