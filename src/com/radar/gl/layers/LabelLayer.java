@@ -38,17 +38,16 @@ public class LabelLayer {
         text.beginRendering(width, height);
         text.setColor(1f, 1f, 1f, 1f);
 
-        // X ekseni: aci etiketleri (en altta)
+        // X ekseni: X koordinati etiketleri (en altta)
         for (int i = 0; i < Geometry.GRID_FRACTIONS.length; i++) {
             float fraction = Geometry.GRID_FRACTIONS[i];
             float worldX = minX + fraction * (maxX - minX);
-            float angleValue = worldX * 360f / Camera.WORLD_SIZE;
-            String angleText = formatLabel(angleValue);
+            String xText = formatLabel(worldX);
 
             int pixelX = Math.round(fraction * width);
-            int textWidth = Math.round((float) text.getBounds(angleText).getWidth());
+            int textWidth = Math.round((float) text.getBounds(xText).getWidth());
             int labelX = (fraction >= 1f) ? pixelX - textWidth - PADDING : pixelX + PADDING;
-            text.draw(angleText, labelX, X_BASELINE);
+            text.draw(xText, labelX, X_BASELINE);
         }
 
         // Y ekseni: menzil etiketleri

@@ -226,13 +226,20 @@ public class RadarCanvas extends GLCanvas implements GLEventListener, IGraph {
 
             @Override
             public void mouseReleased(MouseEvent e) {
-                if (e.getButton() != MouseEvent.BUTTON1) return;
-                if (minimapController.isDragging()) { minimapController.setDragging(false); return; }
-                if (pan.isDragging())               { pan.release(); return; }
+                if (e.getButton() == MouseEvent.BUTTON1) {
+                    if (minimapController.isDragging()) { minimapController.setDragging(false); return; }
+                    if (pan.isDragging())               { pan.release(); return; }
+                }
+
                 float wx = camera.screenToWorldX(e.getX(), getWidth());
                 float wy = camera.screenToWorldY(e.getY(), getHeight());
-                if (markController.isMarkKeyDown()) markController.add(wx, wy);
-                else                                markController.selectAt(wx, wy);
+                
+                if (e.getButton() == MouseEvent.BUTTON3) { // Sag tik -> Isaret ekle
+                    markController.add(wx, wy);
+                } else if (e.getButton() == MouseEvent.BUTTON1) { // Sol tik -> Isaret sec
+                    if (markController.isMarkKeyDown()) markController.add(wx, wy); // Geriye donuk uyumluluk
+                    else                                markController.selectAt(wx, wy);
+                }
             }
 
             @Override
