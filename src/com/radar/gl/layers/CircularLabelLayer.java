@@ -11,7 +11,7 @@ import com.jogamp.opengl.util.awt.TextRenderer;
  */
 public class CircularLabelLayer {
 
-    private static final int FONT_SIZE = 16;
+    private static final int FONT_SIZE = 12;
     private static final int PADDING = 6;
     private TextRenderer text;
 

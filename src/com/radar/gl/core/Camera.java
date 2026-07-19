@@ -67,6 +67,10 @@ public class Camera {
         float range = max - min;
         min += delta;
         max += delta;
+        if (range >= WORLD_SIZE) {
+            float excess = range - WORLD_SIZE;
+            return new float[] { -excess / 2f, WORLD_SIZE + excess / 2f };
+        }
         if (min < 0f)          { min = 0f;          max = range; }
         if (max > WORLD_SIZE)  { max = WORLD_SIZE;  min = WORLD_SIZE - range; }
         return new float[] { min, max };
