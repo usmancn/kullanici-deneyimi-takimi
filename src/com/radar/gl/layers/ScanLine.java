@@ -60,17 +60,26 @@ public class ScanLine {
         float bandEnd   = scanY + (resolution * deltaSec) / SCAN_PERIOD_SEC;
 
         detected.clear();
+        boolean wrapped = false;
         if (bandEnd >= resolution) {
+            wrapped = true;
             bandEnd   = bandEnd % resolution;
-            bandStart = 0f;
         }
 
         List<ISimulationEntity> snapshot = entityManager.getAll();
         for (int i = 0; i < snapshot.size(); i++) {
             ISimulationEntity entity = snapshot.get(i);
             double y = entity.getPosition().y;
-            if (y >= bandStart && y < bandEnd) {
-                detected.add(entity);
+            
+            if (wrapped) {
+                // Wrap-around olduysa, bandStart'tan sona kadar VEYA 0'dan bandEnd'e kadar
+                if ((y >= bandStart && y < resolution) || (y >= 0 && y < bandEnd)) {
+                    detected.add(entity);
+                }
+            } else {
+                if (y >= bandStart && y < bandEnd) {
+                    detected.add(entity);
+                }
             }
         }
 
