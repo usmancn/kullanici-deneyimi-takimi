@@ -5,14 +5,8 @@ import java.util.UUID;
 /**
  * Simülasyon sahnesinde var olabilen her varlığın ana kontratı.
  *
- * <p>Bu interface, çizim ({@link IRenderable}), hareket ({@link IMovable})
- * ve güncelleme ({@link IUpdateable}) yeteneklerini tek çatı altında toplar.
- * Yeni bir varlık türü (ör. mayın, boya noktası) eklenecekse yalnızca
- * bu interface'i implement etmesi yeterlidir; motorun geri kalanı
- * değişmeden çalışmaya devam eder.</p>
- *
- * <p>Her varlığın eşsiz bir kimliği ({@link UUID}) ve ölü/diri durumu vardır.
- * Motor, {@code isAlive()} döndüren varlıkları sahneden kaldırır.</p>
+ * Çizim, hareket ve güncelleme yeteneklerini tek çatı altında toplar.
+ * Her varlığın eşsiz bir kimliği (UUID) ve ölü/diri durumu vardır.
  */
 public interface ISimulationEntity extends IRenderable, IMovable, IUpdateable {
 

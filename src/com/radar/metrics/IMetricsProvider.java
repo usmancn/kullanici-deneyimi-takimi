@@ -3,10 +3,10 @@ package com.radar.metrics;
 /**
  * Sistem kaynak kullanımı metrikleri için genel kontrat.
  *
- * <p>Farklı metrik kaynakları (CPU, GPU, bellek vb.) bu interface'i
- * implement ederek {@link com.radar.ui.MetricsPanel}'e geçirilebilir.
+ * Farklı metrik kaynakları (CPU, GPU, bellek vb.) bu interface'i
+ * implement ederek com.radar.ui.MetricsPanel'e geçirilebilir.
  * Panel, hangi kaynağı gösterdiğini bilmeden yalnızca bu kontrat
- * üzerinden çalışır (Dependency Inversion prensibi).</p>
+ * üzerinden çalışır (Dependency Inversion prensibi).
  */
 public interface IMetricsProvider {
 

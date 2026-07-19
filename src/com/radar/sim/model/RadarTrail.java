@@ -2,14 +2,12 @@ package com.radar.sim.model;
 
 /**
  * Bir geminin bıraktığı iz üzerindeki tek bir anlık görüntüyü (snapshot) temsil eder.
+ * Her update çağrısında geminin mevcut pozisyonu iz listesinin başına eklenir.
+ * Opaklık render sırasında doğrudan OpenGL'e iletilmek üzere tutulur.
  *
- * <p>Her {@link Ship#update(double)} çağrısında geminin mevcut pozisyonu
- * bir {@code RadarTrail} nesnesi olarak iz listesinin başına eklenir.
- * İz listesi {@code SimulationConfig#getTrailLength()} değeriyle sınırlandırılır.</p>
- *
- * <p>Opaklık ({@code opacity}) render sırasında doğrudan OpenGL'e
- * ({@code glColor4f}) aktarılır; iz boyunca azalan opaklık "sönükleşme"
- * (fading) efektini oluşturur.</p>
+ * Opaklık (opacity) render sırasında doğrudan OpenGL'e
+ * (glColor4f) aktarılır; iz boyunca azalan opaklık "sönükleşme"
+ * (fading) efektini oluşturur.
  */
 public final class RadarTrail {
 

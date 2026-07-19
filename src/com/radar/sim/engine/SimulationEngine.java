@@ -121,13 +121,7 @@ public final class SimulationEngine {
 
     /**
      * Tek bir simülasyon adımını gerçekleştirir:
-     * <ol>
-     *   <li>Delta-time hesaplar.</li>
-     *   <li>Eksik gemileri tamamlar (spawn).</li>
-     *   <li>Tüm varlıkları günceller.</li>
-     *   <li>Ölü varlıkları temizler.</li>
-     *   <li>Bir sonraki tick'i planlar.</li>
-     * </ol>
+     * Delta-time hesaplar, eksik gemileri tamamlar, varlıkları günceller ve siler.
      */
     private void tick() {
         try {

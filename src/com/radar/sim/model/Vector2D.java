@@ -3,9 +3,9 @@ package com.radar.sim.model;
 /**
  * İki boyutlu bir vektörü veya noktayı temsil eden değer nesnesi (value object).
  *
- * <p>Nesne <b>immutable</b> (değiştirilemez) tasarlanmıştır: tüm işlem metotları
- * mevcut nesneyi değiştirmek yerine yeni bir {@code Vector2D} örneği döndürür.
- * Bu sayede çoklu thread'ler aynı vektörü güvenle paylaşabilir.</p>
+ * Nesne değiştirilemez (immutable) tasarlanmıştır: tüm işlem metotları
+ * mevcut nesneyi değiştirmek yerine yeni bir Vector2D örneği döndürür.
+ * Bu sayede çoklu thread'ler aynı vektörü güvenle paylaşabilir.
  */
 public final class Vector2D {
 

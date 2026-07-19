@@ -20,14 +20,7 @@ import java.awt.Dimension;
 import java.awt.Font;
 
 /**
- * Ana pencere. Sekmeli yapıda (JTabbedPane) grafik panellerini barındırır.
- *
- * <p>Sekmeler {@link GraphFactory} üzerinden üretilir; yeni bir sekme
- * eklemek için yalnızca {@code buildTabbedPane()} metoduna bir
- * {@link GraphFactory#create} çağrısı eklemek yeterlidir.</p>
- *
- * <p>Tab değişiminde yalnızca görünen sekmenin animasyonu aktif tutulur
- * (CPU / GPU tasarrufu).</p>
+ * Ana taşıyıcı arayüz penceresi.
  */
 @SuppressWarnings("serial")
 public final class MainFrame extends JFrame {

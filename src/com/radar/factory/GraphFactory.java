@@ -11,13 +11,7 @@ import com.radar.gl.ui.RadarCanvas;
 import java.awt.Component;
 
 /**
- * Factory Design Pattern: grafik bilesenlerini tek noktadan uretir.
- *
- * <p>Yeni bir grafik eklenmek istendiginde sadece iki sey yapilmasi yeterlidir:</p>
- * <ol>
- *   <li>{@link GraphType} enum'una yeni bir sabit ekle.</li>
- *   <li>{@link #create} metodundaki switch'e yeni case ekle.</li>
- * </ol>
+ * Factory Design Pattern: grafik bileşenlerini tek noktadan üretir.
  */
 public final class GraphFactory {
 
@@ -36,11 +30,7 @@ public final class GraphFactory {
     private GraphFactory() { /* yardimci sinif */ }
 
     /**
-     * Verilen ture gore bir grafik bileseni uretir.
-     *
-     * <p>Donus degeri hem bir {@link java.awt.Component} (Swing/AWT)
-     * hem de bir {@link IGraph}'tir; ikisine de cast edilebilir.</p>
-     *
+     * Verilen türe göre bir grafik bileşeni üretir.
      * @param type          Grafik turu; null olamaz.
      * @param config        Simulasyon konfigurasyonu; null olamaz.
      * @param entityManager Varlik yoneticisi; null olamaz.

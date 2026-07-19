@@ -6,19 +6,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * JVM işlem CPU kullanımını ölçen metrik sağlayıcısı.
- *
- * <p>{@code com.sun.management.OperatingSystemMXBean} arayüzünün
- * {@code getProcessCpuLoad()} metodu kullanılır. Bu metot,
- * son ölçümden bu yana JVM işleminin tükettiği CPU zamanının
- * toplam kullanılabilir işlemci kapasitesine oranını döndürür.</p>
- *
- * <p>Bazı JVM uygulamalarında ilk çağrıda değer henüz hesaplanmamış
- * olabileceğinden {@code -1} döndürülebilir; bu durum {@code getCurrentUsage()}
- * tarafından N/A ({@code -1.0}) olarak raporlanır.</p>
- *
- * <p><b>Platform uyumu:</b> {@code com.sun.management} paketi
- * Oracle/OpenJDK ile Mac ve Windows'ta desteklenmektedir.</p>
+ * JVM tabanlı Sistem CPU ve Bellek (RAM) kullanım verilerini sağlar.
  */
 public final class CpuMetricsProvider implements IMetricsProvider {
 

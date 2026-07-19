@@ -5,8 +5,8 @@ import java.util.logging.Logger;
 /**
  * GPU/Render thread kullanım metriğini gerçek zamanlı hesaplayan sağlayıcı.
  *
- * <p>JOGL Render döngüsünün (display metodu) ne kadar sürdüğünü, 
- * geçen toplam süreye oranlayarak Render iş hattının doluluk yüzdesini hesaplar.</p>
+ * JOGL Render döngüsünün (display metodu) ne kadar sürdüğünü, 
+ * geçen toplam süreye oranlayarak Render iş hattının doluluk yüzdesini hesaplar.
  */
 public final class GpuMetricsProvider implements IMetricsProvider {
 

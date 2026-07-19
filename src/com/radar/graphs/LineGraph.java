@@ -11,13 +11,8 @@ import java.awt.Color;
 import java.awt.Font;
 
 /**
- * Cizgi (Line) grafik.
- *
- * <p><b>TODO (Ortak):</b> Bu iskelet sinifa Line grafigini implemente et.
- * {@link IGraph} arayuzunu zaten implement ediyor; {@link #startGraph()} ve
- * {@link #stopGraph()} metodlarini istege gore genisletebilirsin.</p>
- *
- * <p>Varliklara {@code entityManager.getAll()} ile ulasabilirsin.</p>
+ * Çizgi (Line) grafik.
+ * TODO: Bu iskelet sınıfa Line grafiğini implemente et.
  */
 @SuppressWarnings("serial")
 public class LineGraph extends JPanel implements IGraph {

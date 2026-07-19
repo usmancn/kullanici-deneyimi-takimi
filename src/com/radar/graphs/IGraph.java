@@ -4,8 +4,7 @@ package com.radar.graphs;
  * Her grafik bileseninin uygulayacagi kontrat.
  * Factory Pattern ve yeni grafik eklemesini kolaylastirir.
  *
- * <p>Implementasyonlar bir Swing {@link java.awt.Component} olmalidir
- * (JPanel veya GLCanvas) ve MainFrame'deki sekmeye dogrudan eklenebilir.</p>
+ * Implementasyonlar bir Swing Component olmalidir. Frame'deki sekmeye dogrudan eklenebilir.
  */
 public interface IGraph {
 

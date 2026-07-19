@@ -11,13 +11,8 @@ import java.awt.Color;
 import java.awt.Font;
 
 /**
- * Selaleli (Waterfall) grafik.
- *
- * <p><b>TODO:</b> Bu iskelet sinifa Waterfall grafigini implemente et.
- * {@link IGraph} arayuzunu zaten implement ediyor; {@link #startGraph()} ve
- * {@link #stopGraph()} metodlarini istege gore genisletebilirsin.</p>
- *
- * <p>Varliklara {@code entityManager.getAll()} ile ulasabilirsin.</p>
+ * Şelaleli (Waterfall) grafik.
+ * TODO: Bu iskelet sınıfa Waterfall grafiğini implemente et.
  */
 @SuppressWarnings("serial")
 public class WaterfallGraph extends JPanel implements IGraph {

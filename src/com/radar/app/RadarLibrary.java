@@ -9,19 +9,7 @@ import com.radar.ui.MainFrame;
 import javax.swing.SwingUtilities;
 
 /**
- * Kütüphanenin (Library) dış dünyaya açılan tek yüzü — Facade Pattern.
- *
- * <p>Builder zinciriyle kullanılır:</p>
- * <pre>{@code
- * RadarLibrary.create()
- *     .withShipCount(50)
- *     .withFrequency(60)
- *     .withGraph(GraphType.RADAR)
- *     .start();
- * }</pre>
- *
- * <p>Tüm bağımlılıklar ({@link SimulationEngine}, {@link EntityManager},
- * {@link MainFrame}) içeride otomatik kurulur; dışarıdan erişim gerekmez.</p>
+ * Kütüphanenin dış dünyaya açılan Builder arayüzü.
  */
 public final class RadarLibrary {
 

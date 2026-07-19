@@ -4,7 +4,7 @@ package com.radar.sim.core;
  * Simülasyon döngüsüne dahil olup her tick'te güncellenmesi gereken
  * her varlığın uygulaması gereken kontrat.
  *
- * <p>Bu metot yalnızca simülasyon thread'inden çağrılır.</p>
+ * Bu metot yalnızca simülasyon thread'inden çağrılır.
  */
 public interface IUpdateable {
 

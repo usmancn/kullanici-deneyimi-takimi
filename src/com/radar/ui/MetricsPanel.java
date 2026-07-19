@@ -13,16 +13,8 @@ import java.awt.FlowLayout;
 import java.awt.Font;
 
 /**
- * Bir {@link IMetricsProvider} kaynağının anlık kullanım değerini
- * grafik olarak gösteren Swing paneli.
- *
- * <p>Panel, {@link Timer} (Swing EDT-safe) aracılığıyla belirli
- * aralıklarla metrik değeri okuyarak {@link CircularBuffer}'a ekler
- * ve {@link GraphPanel}'i yeniden çizdirir.</p>
- *
- * <p><b>Thread güvenliği:</b> Timer EDT'de çalışır; tüm Swing bileşen
- * güncellemeleri güvenlidir. Metrik okuma ({@link IMetricsProvider#getCurrentUsage()})
- * da EDT'den yapılır; provider'ın thread-safe olduğu varsayılır.</p>
+ * Bir veya birden fazla metriği çizen performans grafik paneli.
+ * Timer aracılığıyla düzenli olarak güncellenir.
  */
 @SuppressWarnings("serial")
 public final class MetricsPanel extends JPanel {

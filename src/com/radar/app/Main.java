@@ -4,15 +4,8 @@ package com.radar.app;
 /**
  * Uygulamanın giriş noktası.
  *
- * <p>Kütüphane kullanım örneği — mentörün istediği tek satırlık çağrı:</p>
- * <pre>{@code
- * RadarLibrary.create()
- *     .withShipCount(50)
- *     .withFrequency(60)
- *     .withRadarSpeed(80.0)
- *     .withGraph(GraphType.RADAR)
- *     .start();
- * }</pre>
+ * Kütüphane kullanım örneği:
+ * RadarLibrary.create().withShipCount(50)...start();
  */
 public class Main {
 

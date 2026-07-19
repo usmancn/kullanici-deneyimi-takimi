@@ -12,12 +12,7 @@ import java.awt.Font;
 
 /**
  * Dairesel (Circular) grafik.
- *
- * <p><b>TODO:</b> Bu iskelet sinifa Circular grafigini implemente et.
- * {@link IGraph} arayuzunu zaten implement ediyor; {@link #startGraph()} ve
- * {@link #stopGraph()} metodlarini istege gore genisletebilirsin.</p>
- *
- * <p>Varliklara {@code entityManager.getAll()} ile ulasabilirsin.</p>
+ * TODO: Bu iskelet sınıfa Circular grafiğini implemente et.
  */
 @SuppressWarnings("serial")
 public class CircularGraph extends JPanel implements IGraph {

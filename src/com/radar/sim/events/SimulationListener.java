@@ -7,10 +7,7 @@ import java.util.List;
 /**
  * Simülasyon durumu degistiginde dinleyicilere bildirim gonder.
  *
- * <p>Lambda ile kullanilabilir (Functional Interface):</p>
- * <pre>{@code
- * engine.addListener(entities -> myGraph.update(entities));
- * }</pre>
+ * Lambda ile kullanilabilir (Functional Interface).
  */
 @FunctionalInterface
 public interface SimulationListener {
