@@ -1,7 +1,7 @@
-package com.radar.engine;
+package com.radar.sim.engine;
 
 import com.radar.config.SimulationConfig;
-import com.radar.model.Ship;
+import com.radar.sim.model.Ship;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -21,15 +21,15 @@ import java.util.logging.Logger;
  *       altına düştüğünde otomatik olarak yeni {@link Ship} üretir.</li>
  *   <li>Ölü varlıkları listeden temizler.</li>
  * </ul>
- * </p>
+ *
  *
  * <p><b>Thread modeli:</b> Motor kendi {@link ScheduledExecutorService}'ini (tek thread)
  * yönetir. JOGL render döngüsü ile tamamen bağımsız çalışır; ikisi arasındaki
- * paylaşım {@link EntityManager} üzerinden thread-safe biçimde gerçekleşir.</p>
+ * paylaşım {@link EntityManager} üzerinden thread-safe biçimde gerçekleşir.
  *
  * <p><b>Delta-time hesabı:</b> Planlanan periyot ile gerçek geçen süre arasındaki
  * fark {@code System.nanoTime()} kullanılarak ölçülür ve {@code update(deltaTime)}
- * çağrılarına aktarılır. Bu sayede hareket hesapları kare hızından bağımsız kalır.</p>
+ * çağrılarına aktarılır. Bu sayede hareket hesapları kare hızından bağımsız kalır.
  */
 public final class SimulationEngine {
 
@@ -182,7 +182,7 @@ public final class SimulationEngine {
      * EntityManager'daki tüm varlıkları verilen delta-time ile günceller.
      */
     private void updateAllEntities(double deltaSeconds) {
-        for (com.radar.core.ISimulationEntity entity : entityManager.getAll()) {
+        for (com.radar.sim.core.ISimulationEntity entity : entityManager.getAll()) {
             entity.update(deltaSeconds);
         }
     }

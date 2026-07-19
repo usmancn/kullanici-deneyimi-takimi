@@ -1,4 +1,4 @@
-package com.radar.core;
+package com.radar.sim.core;
 
 /**
  * Simülasyon döngüsüne dahil olup her tick'te güncellenmesi gereken

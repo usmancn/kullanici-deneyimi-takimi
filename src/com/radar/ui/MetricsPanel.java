@@ -24,6 +24,7 @@ import java.awt.Font;
  * güncellemeleri güvenlidir. Metrik okuma ({@link IMetricsProvider#getCurrentUsage()})
  * da EDT'den yapılır; provider'ın thread-safe olduğu varsayılır.</p>
  */
+@SuppressWarnings("serial")
 public final class MetricsPanel extends JPanel {
 
     private final IMetricsProvider  provider;

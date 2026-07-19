@@ -4,13 +4,9 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 
 /**
- * Sabit kapasiteli dairesel arabellek (ring buffer).
- *
- * <p>Kapasite dolduğunda en eski eleman otomatik olarak kaldırılır.
- * Metrik geçmişini tutmak için kullanılır.</p>
- *
- * <p><b>Thread güvenliği:</b> Bu sınıf tek thread kullanımı için
- * tasarlanmıştır. Swing EDT üzerinden erişilmelidir.</p>
+ * Sabit kapasiteli dairesel tampon (halka arabelleği).
+ * Dolu olduğunda en eski öğeyi otomatik olarak siler.
+ * MetricsPanel gibi zaman serisi grafiklerinde kullanılır.
  */
 public final class CircularBuffer {
 
@@ -18,56 +14,39 @@ public final class CircularBuffer {
     private final int capacity;
 
     /**
-     * Belirtilen kapasite ile yeni bir dairesel arabellek oluşturur.
-     *
-     * @param capacity Tutulacak maksimum eleman sayısı; pozitif olmalıdır.
+     * @param capacity Maksimum eleman sayısı; en az 1 olmalıdır.
      */
     public CircularBuffer(int capacity) {
-        if (capacity <= 0) {
-            throw new IllegalArgumentException("Kapasite pozitif olmalidir: " + capacity);
-        }
+        if (capacity < 1) throw new IllegalArgumentException("Kapasite en az 1 olmalidir.");
         this.capacity = capacity;
         this.buffer   = new ArrayDeque<>(capacity);
     }
 
     /**
-     * Arabelleke yeni bir değer ekler.
-     * Kapasite doluysa en eski eleman kaldırılır.
-     *
-     * @param value Eklenecek değer.
+     * Tampona yeni bir değer ekler.
+     * Doluysa en eski değer otomatik olarak çıkarılır.
      */
-    public void add(double value) {
-        if (buffer.size() >= capacity) {
-            buffer.removeFirst();
-        }
+    public synchronized void add(double value) {
+        if (buffer.size() >= capacity) buffer.pollFirst();
         buffer.addLast(value);
     }
 
     /**
-     * Arabellekteki tüm değerlerin anlık görüntüsünü dizi olarak döndürür.
-     * En eski değer indeks 0'da, en yeni son indekste bulunur.
-     *
-     * @return Değerler dizisi; boş olabilir, null olamaz.
+     * Tampondaki değerlerin anlık kopyasını döndürür (en eskiden en yeniye).
      */
-    public double[] toArray() {
-        Double[] boxed  = buffer.toArray(new Double[0]);
-        double[] result = new double[boxed.length];
-        for (int i = 0; i < boxed.length; i++) {
-            result[i] = boxed[i];
-        }
+    public synchronized double[] snapshot() {
+        double[] result = new double[buffer.size()];
+        int i = 0;
+        for (double v : buffer) result[i++] = v;
         return result;
     }
 
-    /**
-     * Arabellekteki mevcut eleman sayısını döndürür.
-     */
-    public int size() {
+    /** Tampondaki mevcut eleman sayısı. */
+    public synchronized int size() {
         return buffer.size();
     }
 
-    /**
-     * Arabellekteki maksimum kapasite.
-     */
+    /** Maksimum kapasite. */
     public int getCapacity() {
         return capacity;
     }

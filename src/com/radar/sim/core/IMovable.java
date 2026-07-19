@@ -1,6 +1,6 @@
-package com.radar.core;
+package com.radar.sim.core;
 
-import com.radar.model.Vector2D;
+import com.radar.sim.model.Vector2D;
 
 /**
  * Sahada hareket edebilen her varlığın uygulaması gereken kontrat.

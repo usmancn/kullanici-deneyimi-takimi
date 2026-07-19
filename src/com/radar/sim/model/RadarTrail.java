@@ -1,4 +1,4 @@
-package com.radar.model;
+package com.radar.sim.model;
 
 /**
  * Bir geminin bıraktığı iz üzerindeki tek bir anlık görüntüyü (snapshot) temsil eder.

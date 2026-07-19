@@ -1,4 +1,4 @@
-package com.radar.model;
+package com.radar.sim.model;
 
 /**
  * İki boyutlu bir vektörü veya noktayı temsil eden değer nesnesi (value object).

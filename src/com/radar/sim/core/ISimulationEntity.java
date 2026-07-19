@@ -1,4 +1,4 @@
-package com.radar.core;
+package com.radar.sim.core;
 
 import java.util.UUID;
 

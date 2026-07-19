@@ -1,6 +1,6 @@
-package com.radar.engine;
+package com.radar.sim.engine;
 
-import com.radar.core.ISimulationEntity;
+import com.radar.sim.core.ISimulationEntity;
 
 import java.util.Collections;
 import java.util.List;
@@ -17,7 +17,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  *       almadan listeyi okuyabilir.</li>
  * </ul>
  * Yazma işlemleri nadir olduğundan (yalnızca spawn ve temizleme) bu yapının
- * getirdiği kopyalama maliyeti kabul edilebilir düzeydedir.</p>
+ * getirdiği kopyalama maliyeti kabul edilebilir düzeydedir.
  */
 public final class EntityManager {
 
@@ -65,11 +65,11 @@ public final class EntityManager {
     /**
      * İşaretli gemileri döndürür. Sekmedeki tabloya veri sağlamak için kullanılır.
      */
-    public List<com.radar.model.Ship> getMarkedShips() {
-        List<com.radar.model.Ship> markedShips = new java.util.ArrayList<>();
+    public List<com.radar.sim.model.Ship> getMarkedShips() {
+        List<com.radar.sim.model.Ship> markedShips = new java.util.ArrayList<>();
         for (ISimulationEntity entity : entities) {
-            if (entity instanceof com.radar.model.Ship) {
-                com.radar.model.Ship ship = (com.radar.model.Ship) entity;
+            if (entity instanceof com.radar.sim.model.Ship) {
+                com.radar.sim.model.Ship ship = (com.radar.sim.model.Ship) entity;
                 if (ship.isMarked()) {
                     markedShips.add(ship);
                 }

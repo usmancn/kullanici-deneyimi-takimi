@@ -1,8 +1,11 @@
 package com.radar.ui;
 
 import com.radar.config.SimulationConfig;
-import com.radar.engine.EntityManager;
-import com.radar.engine.SimulationEngine;
+import com.radar.sim.engine.EntityManager;
+import com.radar.sim.engine.SimulationEngine;
+import com.radar.factory.GraphFactory;
+import com.radar.factory.GraphFactory.GraphType;
+import com.radar.graphs.IGraph;
 import com.radar.metrics.CpuMetricsProvider;
 import com.radar.metrics.GpuMetricsProvider;
 
@@ -12,106 +15,105 @@ import javax.swing.WindowConstants;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
 
 /**
- * Uygulamanın ana penceresi.
+ * Ana pencere. Sekmeli yapıda (JTabbedPane) grafik panellerini barındırır.
  *
- * <p>Üç sekme içerir:
- * <ol>
- *   <li><b>Radar</b>: JOGL tabanlı gemi radar simülasyonu + kontrol paneli.</li>
- *   <li><b>CPU</b>: Anlık CPU kullanım grafiği.</li>
- *   <li><b>GPU</b>: Anlık GPU kullanım grafiği (simüle edilmiş).</li>
- * </ol>
- * </p>
+ * <p>Sekmeler {@link GraphFactory} üzerinden üretilir; yeni bir sekme
+ * eklemek için yalnızca {@code buildTabbedPane()} metoduna bir
+ * {@link GraphFactory#create} çağrısı eklemek yeterlidir.</p>
  *
- * <p><b>Thread güvenliği:</b> Tüm Swing bileşeni kurulumu EDT'de yapılmalıdır.
- * Bu sınıf yalnızca {@code SwingUtilities.invokeLater()} içinden
- * örneklenmelidir.</p>
- *
- * <p><b>Sekme değişimi:</b> Radar sekmesinden ayrılırken animator durdurulur,
- * geri dönünce yeniden başlatılır. Metrik panelleri yalnızca aktif sekmeyken
- * güncellenir.</p>
+ * <p>Tab değişiminde yalnızca görünen sekmenin animasyonu aktif tutulur
+ * (CPU / GPU tasarrufu).</p>
  */
+@SuppressWarnings("serial")
 public final class MainFrame extends JFrame {
 
-    private static final String TAB_RADAR = "Radar";
-    private static final String TAB_CPU   = "CPU";
-    private static final String TAB_GPU   = "GPU";
-    private static final String TAB_MARKED = "İşaretli Gemiler";
+    private static final String TAB_RADAR     = "Radar (Osman)";
+    private static final String TAB_WATERFALL = "Waterfall (Fatih)";
+    private static final String TAB_CIRCULAR  = "Circular (Altay)";
+    private static final String TAB_METRICS   = "Sistem Metrikleri";
 
+    private final SimulationEngine engine;
 
-    private final RadarPanel        radarPanel;
-    private final MetricsPanel      cpuPanel;
-    private final MetricsPanel      gpuPanel;
-    private final MarkedShipsPanel  markedShipsPanel;
-    private final SimulationEngine  engine;
+    // Her sekmenin bileşenine IGraph arayüzüyle erişiyoruz
+    private final IGraph radarGraph;
+    private final IGraph waterfallGraph;
+    private final IGraph circularGraph;
+
+    // Metrik panelleri (IGraph değil; kendi API'leri var)
+    private final MetricsPanel cpuPanel;
+    private final MetricsPanel gpuPanel;
 
     /**
-     * Yeni bir ana pencere oluşturur ve tüm bileşenleri bağlar.
-     *
      * @param config        Konfigürasyon; null olamaz.
      * @param entityManager Varlık yöneticisi; null olamaz.
      * @param engine        Simülasyon motoru; null olamaz.
+     * @param frequency     Radar render FPS hedefi.
+     * @param initialGraph  Açılışta odaklanılacak sekme.
      */
     public MainFrame(SimulationConfig config,
                      EntityManager entityManager,
-                     SimulationEngine engine) {
-        super("Gemi Radar Simülasyonu");
+                     SimulationEngine engine,
+                     int frequency,
+                     GraphType initialGraph) {
 
-        if (config == null || entityManager == null || engine == null) {
-            throw new IllegalArgumentException("MainFrame bagimliliklari null olamaz.");
-        }
+        super("Radar Simülasyonu");
         this.engine = engine;
 
         setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
-        setMinimumSize(new Dimension(800, 600));
-        getContentPane().setBackground(new Color(10, 10, 16));
-
-        // Panelleri oluştur
-        this.radarPanel = new RadarPanel(config, entityManager, engine);
-        this.cpuPanel   = new MetricsPanel(new CpuMetricsProvider(), config);
-        this.gpuPanel   = new MetricsPanel(new GpuMetricsProvider(), config);
-        this.markedShipsPanel = new MarkedShipsPanel(entityManager);
-
-        // Sekmeli yapı
-        JTabbedPane tabbedPane = buildTabbedPane();
-        getContentPane().add(tabbedPane);
-
-        // Pencere kapanışı
-        addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosing(WindowEvent e) {
-                shutdown();
-            }
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override public void windowClosing(java.awt.event.WindowEvent e) { shutdown(); }
         });
 
+        setMinimumSize(new Dimension(900, 700));
+        getContentPane().setBackground(new Color(10, 10, 16));
+
+        // --- Grafik bileşenlerini GraphFactory'den üret ---
+        Component radarComp     = GraphFactory.create(GraphType.RADAR,     config, entityManager, frequency);
+        Component waterfallComp = GraphFactory.create(GraphType.WATERFALL, config, entityManager, frequency);
+        Component circularComp  = GraphFactory.create(GraphType.CIRCULAR,  config, entityManager, frequency);
+
+        this.radarGraph     = (IGraph) radarComp;
+        this.waterfallGraph = (IGraph) waterfallComp;
+        this.circularGraph  = (IGraph) circularComp;
+
+        // --- Metrik panelleri ---
+        this.cpuPanel = new MetricsPanel(new CpuMetricsProvider(), config);
+        this.gpuPanel = new MetricsPanel(new GpuMetricsProvider(), config);
+
+        // --- Sekmeli yapı ---
+        JTabbedPane tabbedPane = buildTabbedPane(
+                radarComp, waterfallComp, circularComp, initialGraph);
+        getContentPane().add(tabbedPane);
+
         pack();
-        setLocationRelativeTo(null); // Ekran ortasına konumlandır
+        setLocationRelativeTo(null);
     }
 
-    // -------------------------------------------------------------------------
-    // Başlatma ve Kapatma
-    // -------------------------------------------------------------------------
+    // ------------------------------------------------------------------ //
+    // Yaşam Döngüsü
+    // ------------------------------------------------------------------ //
 
     /**
-     * Render ve metrik güncellemelerini başlatır.
+     * Tüm grafiklerin ve metrik panellerinin animasyonunu başlatır.
      * Pencere görünür hale getirilmeden önce çağrılmalıdır.
      */
     public void startAll() {
-        radarPanel.startRendering();
+        radarGraph.startGraph();
         cpuPanel.startUpdating();
         gpuPanel.startUpdating();
+        // Waterfall ve Circular başlangıçta duraksatılır;
+        // sekmeye gelindiğinde ChangeListener devreye alır.
     }
 
-    /**
-     * Tüm bileşenleri temiz biçimde kapatır ve uygulamayı sonlandırır.
-     */
     private void shutdown() {
-        radarPanel.stopRendering();
+        radarGraph.stopGraph();
+        waterfallGraph.stopGraph();
+        circularGraph.stopGraph();
         cpuPanel.stopUpdating();
         gpuPanel.stopUpdating();
         engine.stop();
@@ -119,42 +121,61 @@ public final class MainFrame extends JFrame {
         System.exit(0);
     }
 
-    // -------------------------------------------------------------------------
+    // ------------------------------------------------------------------ //
     // Sekme Yapısı
-    // -------------------------------------------------------------------------
+    // ------------------------------------------------------------------ //
 
-    private JTabbedPane buildTabbedPane() {
-        JTabbedPane tabbedPane = new JTabbedPane(JTabbedPane.TOP);
-        tabbedPane.setBackground(new Color(10, 10, 16));
-        tabbedPane.setForeground(new Color(200, 200, 215));
-        tabbedPane.setFont(tabbedPane.getFont().deriveFont(Font.BOLD, 13.0f));
+    private JTabbedPane buildTabbedPane(Component radarComp,
+                                        Component waterfallComp,
+                                        Component circularComp,
+                                        GraphType initialGraph) {
 
-        tabbedPane.addTab(TAB_RADAR, radarPanel);
-        tabbedPane.addTab(TAB_CPU,   cpuPanel);
-        tabbedPane.addTab(TAB_GPU,   gpuPanel);
-        tabbedPane.addTab(TAB_MARKED, markedShipsPanel);
+        JTabbedPane tabs = new JTabbedPane(JTabbedPane.TOP);
+        tabs.setBackground(new Color(10, 10, 16));
+        tabs.setForeground(new Color(200, 200, 215));
+        tabs.setFont(tabs.getFont().deriveFont(Font.BOLD, 13.0f));
 
-        // Sekme değişim yönetimi
-        tabbedPane.addChangeListener(new ChangeListener() {
-            private int previousTab = 0;
+        // Metrik paneli: CPU + GPU yan yana
+        MetricsSplitPanel metricsPanel = new MetricsSplitPanel(cpuPanel, gpuPanel);
+
+        tabs.addTab(TAB_RADAR,     radarComp);
+        tabs.addTab(TAB_WATERFALL, waterfallComp);
+        tabs.addTab(TAB_CIRCULAR,  circularComp);
+        tabs.addTab(TAB_METRICS,   metricsPanel);
+
+        // Başlangıç sekmesini ayarla
+        int startIndex = graphTypeToIndex(initialGraph);
+        if (startIndex >= 0) tabs.setSelectedIndex(startIndex);
+
+        // Tab değişiminde animasyon yönetimi (CPU/GPU tasarrufu)
+        tabs.addChangeListener(new ChangeListener() {
+            private int previous = tabs.getSelectedIndex();
+            private final IGraph[] graphs = { radarGraph, waterfallGraph, circularGraph, null };
 
             @Override
             public void stateChanged(ChangeEvent e) {
-                int selectedTab = tabbedPane.getSelectedIndex();
+                int selected = tabs.getSelectedIndex();
 
-                // Önceki sekme Radar ise animasyonu durdur
-                if (previousTab == 0) {
-                    radarPanel.pauseRendering();
+                // Önceki sekmenin grafigini durdur
+                if (previous >= 0 && previous < graphs.length && graphs[previous] != null) {
+                    graphs[previous].stopGraph();
                 }
-                // Radar sekmesine geçildiyse animasyonu başlat
-                if (selectedTab == 0) {
-                    radarPanel.resumeRendering();
+                // Yeni sekmenin grafigini başlat
+                if (selected >= 0 && selected < graphs.length && graphs[selected] != null) {
+                    graphs[selected].startGraph();
                 }
-
-                previousTab = selectedTab;
+                previous = selected;
             }
         });
 
-        return tabbedPane;
+        return tabs;
+    }
+
+    private static int graphTypeToIndex(GraphType type) {
+        switch (type) {
+            case WATERFALL: return 1;
+            case CIRCULAR:  return 2;
+            default:        return 0;
+        }
     }
 }
