@@ -147,22 +147,8 @@ public final class RadarPanel extends JPanel {
 
         // Radar panelinin ekrana sündürülmesini engellemek için, tam kare kalmasını (1:1 aspect ratio)
         // sağlayan özel bir wrapper panel yazıyoruz. Pencere küçülürse panel de orantılı küçülür.
-        JPanel canvasWrapper = new JPanel(null) {
-            @Override
-            public void doLayout() {
-                int w = getWidth();
-                int h = getHeight();
-                int size = Math.min(w, h);
-                int x = (w - size) / 2;
-                int y = (h - size) / 2;
-                glCanvas.setBounds(x, y, size, size);
-            }
-        };
-        canvasWrapper.setBackground(new Color(8, 8, 12));
-        canvasWrapper.add(glCanvas);
-
-        add(canvasWrapper,    BorderLayout.CENTER);
-        add(controlPanel, BorderLayout.EAST);
+        add(buildLayeredPane(config), BorderLayout.CENTER);
+        add(controlPanel,             BorderLayout.EAST);
     }
 
     // -------------------------------------------------------------------------

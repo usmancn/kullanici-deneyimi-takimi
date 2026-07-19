@@ -11,6 +11,7 @@ import javax.swing.JSlider;
 import javax.swing.JSpinner;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingConstants;
+import javax.swing.Timer;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -38,8 +39,9 @@ public final class ControlPanel extends JPanel {
 
     private final SimulationConfig  config;
     private final SimulationEngine  engine;
-    
+
     private JLabel mouseCoordsLabel;
+    private JLabel engineStatusLabel;
 
     /**
      * Yeni bir kontrol paneli oluşturur.
@@ -68,12 +70,32 @@ public final class ControlPanel extends JPanel {
         add(buildMinOpacitySlider());
         add(buildDebugModeCheckbox());
 
+        // Motor durum göstergesi
+        add(buildSectionTitle("Motor Durumu"));
+        engineStatusLabel = new JLabel("", SwingConstants.LEFT);
+        engineStatusLabel.setFont(engineStatusLabel.getFont().deriveFont(Font.BOLD, 12.0f));
+        add(engineStatusLabel);
+        updateEngineStatusLabel();
+
+        // 500ms'de bir durumu yenile
+        new Timer(500, e -> updateEngineStatusLabel()).start();
+
         // Mouse koordinatları için alan
         add(buildSectionTitle("İmleç Konumu"));
         mouseCoordsLabel = new JLabel("X: 0, Y: 0", SwingConstants.LEFT);
         mouseCoordsLabel.setForeground(new Color(200, 200, 215));
         mouseCoordsLabel.setFont(mouseCoordsLabel.getFont().deriveFont(Font.BOLD, 12.0f));
         add(mouseCoordsLabel);
+    }
+
+    private void updateEngineStatusLabel() {
+        if (engine.isRunning()) {
+            engineStatusLabel.setText("\u25CF Çalışıyor");
+            engineStatusLabel.setForeground(new Color(0, 220, 80));
+        } else {
+            engineStatusLabel.setText("\u25CF Durdu");
+            engineStatusLabel.setForeground(new Color(220, 60, 60));
+        }
     }
 
     /**
