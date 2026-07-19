@@ -10,70 +10,77 @@ import com.jogamp.common.nio.Buffers;
 
 /**
  * Dairesel radar icin ic ice gecmis halkalar ve aci cizgileri cizer.
+ * Optimizasyon: Tek bir cember VBO'su uretip farkli yari caplar icin tekrar kullanir.
  */
 public class CircularGridLayer {
 
     private final float[] matrix = new float[16];
-    private final FloatBuffer vertexBuffer;
-    private final int vertexCount;
+    private final FloatBuffer circleBuffer;
+    private final FloatBuffer lineBuffer;
+    
+    private static final int CIRCLE_STEP = 128;
+    private static final int RADIAL_LINES = 12;
 
-    // Renk: hafif yesilimsi (kare izgara rengi)
+    // Renk: Fatih'in koyu yesil / parlak grid rengi
     private static final float R = 0.05f;
     private static final float G = 0.35f;
     private static final float B = 0.15f;
 
     public CircularGridLayer() {
-        // 5 adet ic ice halka, her halka 64 parca cizgi
-        // 12 adet aci cizgisi (30 derecede bir)
-        int numRings = 5;
-        int segmentsPerRing = 64;
-        int numAngleLines = 12;
+        // 1. Cember Vertex'leri (Yaricap 1, Merkez 0,0)
+        circleBuffer = Buffers.newDirectFloatBuffer(CIRCLE_STEP * 2);
+        for (int i = 0; i < CIRCLE_STEP; i++) {
+            double angle = 2.0 * Math.PI * i / CIRCLE_STEP;
+            circleBuffer.put((float) Math.cos(angle));
+            circleBuffer.put((float) Math.sin(angle));
+        }
+        circleBuffer.flip();
 
-        vertexCount = (numRings * segmentsPerRing * 2) + (numAngleLines * 2);
-        vertexBuffer = Buffers.newDirectFloatBuffer(vertexCount * 2);
-
-        float centerX = Camera.WORLD_SIZE / 2f;
-        float centerY = Camera.WORLD_SIZE / 2f;
+        // 2. Aci Cizgileri (Merkezden distaki cembere kadar)
+        lineBuffer = Buffers.newDirectFloatBuffer(RADIAL_LINES * 4);
+        float cx = Camera.WORLD_SIZE / 2f;
+        float cy = Camera.WORLD_SIZE / 2f;
         float maxRadius = Camera.WORLD_SIZE / 2f;
-
-        // Halkalari uret
-        for (int i = 1; i <= numRings; i++) {
-            float radius = maxRadius * ((float) i / numRings);
-            for (int j = 0; j < segmentsPerRing; j++) {
-                double angle1 = (j * 2 * Math.PI) / segmentsPerRing;
-                double angle2 = ((j + 1) * 2 * Math.PI) / segmentsPerRing;
-
-                vertexBuffer.put(centerX + (float)(Math.cos(angle1) * radius));
-                vertexBuffer.put(centerY + (float)(Math.sin(angle1) * radius));
-
-                vertexBuffer.put(centerX + (float)(Math.cos(angle2) * radius));
-                vertexBuffer.put(centerY + (float)(Math.sin(angle2) * radius));
-            }
+        
+        for (int i = 0; i < RADIAL_LINES; i++) {
+            double angle = 2.0 * Math.PI * i / RADIAL_LINES;
+            lineBuffer.put(cx).put(cy);
+            lineBuffer.put(cx + maxRadius * (float) Math.cos(angle));
+            lineBuffer.put(cy + maxRadius * (float) Math.sin(angle));
         }
-
-        // Aci cizgilerini uret
-        for (int i = 0; i < numAngleLines; i++) {
-            double angle = (i * 2 * Math.PI) / numAngleLines;
-            vertexBuffer.put(centerX);
-            vertexBuffer.put(centerY);
-            vertexBuffer.put(centerX + (float)(Math.cos(angle) * maxRadius));
-            vertexBuffer.put(centerY + (float)(Math.sin(angle) * maxRadius));
-        }
-
-        vertexBuffer.flip();
+        lineBuffer.flip();
     }
 
     public void draw(GL2 gl, ShaderProgram shader, Camera camera) {
+        float cx = Camera.WORLD_SIZE / 2f;
+        float cy = Camera.WORLD_SIZE / 2f;
+        float maxRadius = Camera.WORLD_SIZE / 2f;
+
+        shader.setTint(gl, R, G, B, 0.4f);
+        gl.glLineWidth(1f);
+        gl.glEnableClientState(GL2.GL_VERTEX_ARRAY);
+
+        // -- Ic ice halkalari ciz (Sonar gibi dalga dalga)
+        gl.glVertexPointer(2, GL.GL_FLOAT, 0, circleBuffer);
+        
+        // Fatih'in kodundaki gibi 4 halka (1.0, 0.75, 0.50, 0.25 oranlarinda)
+        for(float i = 1f; i > 0; i -= 0.25f) {
+            float size = maxRadius * 2f * i;
+            camera.modelMatrix(matrix, cx, cy, size, size);
+            shader.setMatrix(gl, matrix);
+            gl.glDrawArrays(GL.GL_LINE_LOOP, 0, CIRCLE_STEP);
+        }
+
+        // -- Radyal (Aci) cizgilerini ciz
+        gl.glVertexPointer(2, GL.GL_FLOAT, 0, lineBuffer);
         camera.modelMatrix(matrix, 0, 0, Camera.WORLD_SIZE, Camera.WORLD_SIZE);
         shader.setMatrix(gl, matrix);
-        shader.setTint(gl, R, G, B, 0.4f);
-
-        gl.glEnableClientState(GL2.GL_VERTEX_ARRAY);
-        gl.glVertexPointer(2, GL.GL_FLOAT, 0, vertexBuffer);
-
-        gl.glLineWidth(1f);
-        gl.glDrawArrays(GL.GL_LINES, 0, vertexCount);
+        gl.glDrawArrays(GL.GL_LINES, 0, RADIAL_LINES * 2);
 
         gl.glDisableClientState(GL2.GL_VERTEX_ARRAY);
+    }
+    
+    public FloatBuffer getCircleBuffer() {
+        return circleBuffer;
     }
 }

@@ -8,39 +8,37 @@ import com.radar.gl.core.Camera;
 import com.radar.gl.core.ShaderProgram;
 
 import java.nio.FloatBuffer;
-import com.jogamp.common.nio.Buffers;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Dairesel radar icin donen tarama cizgisi (Sweep).
- * Aci tabanli calisir ve konik bir isik (ucgen dilimi) uretir.
+ * Sonar Ripple: Dairesel radarda merkezden dista dogru buyuyen dalga.
+ * Fatih'in "SecondGraph" mantigina birebir uygundur.
  */
 public class CircularScanLine {
 
-    private static final float SCAN_PERIOD_SEC = 5f; // Tam tur suresi
+    private static final float SCAN_PERIOD_SEC = 5f; // Tam dalga suresi
     private final EntityManager entityManager;
 
-    private float scanAngle  = 0f; // 0 to 2*PI
+    private float scanRadius = 0f; // 0'dan maxRadius'a kadar artar
     private long  lastTimeNs = 0L;
     private final List<ISimulationEntity> detected = new ArrayList<>();
     private final float[] matrix = new float[16];
+    
+    // Grid katmaninin paylastigi cember VBO referansi
+    private final FloatBuffer circleBuffer;
+    private static final int CIRCLE_STEP = 128;
 
-    // Konik isik cizimi icin buffer (Sweep Trail)
-    private final FloatBuffer coneBuffer;
-    private static final int CONE_SEGMENTS = 30; // Iz ucgenleri
-    private static final float CONE_LENGTH_RAD = 1.0f; // Arkasinda birakan izin acisal uzunlugu
-
-    public CircularScanLine(EntityManager entityManager) {
+    public CircularScanLine(EntityManager entityManager, FloatBuffer circleBuffer) {
         this.entityManager = entityManager;
-        coneBuffer = Buffers.newDirectFloatBuffer((CONE_SEGMENTS + 2) * 2);
+        this.circleBuffer = circleBuffer;
     }
 
     public List<ISimulationEntity> detected() { return detected; }
-    public float scanAngle()                  { return scanAngle; }
+    public float scanRadius()                 { return scanRadius; }
 
     public void reset() {
-        scanAngle  = 0f;
+        scanRadius = 0f;
         lastTimeNs = 0L;
         detected.clear();
     }
@@ -51,39 +49,38 @@ public class CircularScanLine {
         float deltaSec = (now - lastTimeNs) / 1_000_000_000f;
         lastTimeNs = now;
 
-        float angleSpeed = (float) (2 * Math.PI) / SCAN_PERIOD_SEC;
-        float prevAngle = scanAngle;
-        scanAngle += angleSpeed * deltaSec;
+        float maxRadius = Camera.WORLD_SIZE / 2f;
+        float speed = maxRadius / SCAN_PERIOD_SEC;
+        
+        float prevRadius = scanRadius;
+        scanRadius += speed * deltaSec;
         
         boolean wrapped = false;
-        if (scanAngle >= 2 * Math.PI) {
-            scanAngle -= 2 * Math.PI;
+        if (scanRadius >= maxRadius) {
+            scanRadius -= maxRadius;
             wrapped = true;
         }
 
         detected.clear();
         float cx = Camera.WORLD_SIZE / 2f;
         float cy = Camera.WORLD_SIZE / 2f;
-        float maxRadius = Camera.WORLD_SIZE / 2f;
 
         for (ISimulationEntity entity : entityManager.getAll()) {
             double ex = entity.getPosition().x;
             double ey = entity.getPosition().y;
             
-            // Gemi radarin icinde mi?
+            // Geminin merkeze olan uzakligi
             double distSq = (ex - cx)*(ex - cx) + (ey - cy)*(ey - cy);
             if (distSq > maxRadius * maxRadius) continue;
+            
+            double targetRadius = Math.sqrt(distSq);
 
-            // Acisini hesapla (0 ile 2*PI arasi)
-            double angle = Math.atan2(ey - cy, ex - cx);
-            if (angle < 0) angle += 2 * Math.PI;
-
-            // Gemi eski aci ile yeni aci arasinda mi kaldi?
+            // Gemi eski dalga capi ile yeni dalga capi arasinda mi kaldi?
             boolean isHit = false;
             if (!wrapped) {
-                if (angle >= prevAngle && angle <= scanAngle) isHit = true;
+                if (targetRadius >= prevRadius && targetRadius <= scanRadius) isHit = true;
             } else {
-                if (angle >= prevAngle || angle <= scanAngle) isHit = true;
+                if (targetRadius >= prevRadius || targetRadius <= scanRadius) isHit = true;
             }
 
             if (isHit) {
@@ -95,36 +92,19 @@ public class CircularScanLine {
     public void draw(GL2 gl, ShaderProgram shader, Camera camera) {
         float cx = Camera.WORLD_SIZE / 2f;
         float cy = Camera.WORLD_SIZE / 2f;
-        float maxRadius = Camera.WORLD_SIZE / 2f;
 
-        camera.modelMatrix(matrix, 0, 0, Camera.WORLD_SIZE, Camera.WORLD_SIZE);
-        shader.setMatrix(gl, matrix);
-
-        // 1. Ana Tarama Cizgisi
+        shader.setTint(gl, 0.3f, 1.0f, 0.4f, 0.9f); // Fatih'in dalga rengi
         gl.glLineWidth(3f);
-        shader.setTint(gl, 0.4f, 1.0f, 0.4f, 0.9f);
-        gl.glBegin(GL.GL_LINES);
-        gl.glVertex2f(cx, cy);
-        gl.glVertex2f(cx + (float) Math.cos(scanAngle) * maxRadius, cy + (float) Math.sin(scanAngle) * maxRadius);
-        gl.glEnd();
-
-        // 2. Tarama Iz Cizimi (Sweep Cone)
-        coneBuffer.clear();
-        coneBuffer.put(cx).put(cy); // Merkez
-        for (int i = 0; i <= CONE_SEGMENTS; i++) {
-            float a = scanAngle - (i * CONE_LENGTH_RAD / CONE_SEGMENTS);
-            coneBuffer.put(cx + (float) Math.cos(a) * maxRadius);
-            coneBuffer.put(cy + (float) Math.sin(a) * maxRadius);
-        }
-        coneBuffer.flip();
-
-        gl.glEnableClientState(GL2.GL_VERTEX_ARRAY);
-        gl.glVertexPointer(2, GL.GL_FLOAT, 0, coneBuffer);
-
-        // Gradient efekti (merkezden disari) shader desteklemedigi icin opacity'i dusuk tutarak yarim saydam ucgen fani ciziyoruz
-        shader.setTint(gl, 0.2f, 0.8f, 0.2f, 0.15f);
-        gl.glDrawArrays(GL.GL_TRIANGLE_FAN, 0, CONE_SEGMENTS + 2);
         
+        gl.glEnableClientState(GL2.GL_VERTEX_ARRAY);
+        gl.glVertexPointer(2, GL.GL_FLOAT, 0, circleBuffer);
+
+        float size = scanRadius * 2f;
+        camera.modelMatrix(matrix, cx, cy, size, size);
+        shader.setMatrix(gl, matrix);
+        
+        gl.glDrawArrays(GL.GL_LINE_LOOP, 0, CIRCLE_STEP);
+
         gl.glDisableClientState(GL2.GL_VERTEX_ARRAY);
     }
 }
