@@ -141,6 +141,20 @@ public class CircularGraph extends GLCanvas implements GLEventListener, IGraph {
     @Override
     public void display(GLAutoDrawable drawable) {
         GL2 gl = drawable.getGL().getGL2();
+        
+        // Aspekt oranini her frame'de zorla (ZoomController'in en-boy oranini bozmasini engeller)
+        int width = drawable.getSurfaceWidth();
+        int height = drawable.getSurfaceHeight();
+        if (height == 0) height = 1;
+        float aspect = (float) width / height;
+        float rangeY = camera.rangeY();
+        float expectedRangeX = rangeY * aspect;
+        // Eger rangeX beklenenden %1 bile farkliysa duzelt
+        if (Math.abs(camera.rangeX() - expectedRangeX) > 0.01f) {
+            float currentCenterX = camera.centerX();
+            camera.setRangeX(currentCenterX - expectedRangeX / 2f, currentCenterX + expectedRangeX / 2f);
+        }
+        
         gl.glClear(GL.GL_COLOR_BUFFER_BIT);
 
         scan.advance();

@@ -85,6 +85,13 @@ public class CircularTargetLayer {
             float opacity = 1.0f - 0.8f * (radialDistance / maxRadius);
             if (opacity < 0.2f) opacity = 0.2f;
 
+            // Merkeze olan uzakliga gore hedefin boyutunu buyut (Gercekci radar yay etkisi)
+            double distSq = (blip.x - cx)*(blip.x - cx) + (blip.y - cy)*(blip.y - cy);
+            float distFromCenter = (float) Math.sqrt(distSq);
+            // Merkezde 1x, en dista 3.5x olacak sekilde olceklendir
+            float scaleFactor = 1.0f + (distFromCenter / maxRadius) * 2.5f;
+            float currentTargetSize = TARGET_SIZE * scaleFactor;
+
             for (int j = 0; j < blip.trail.size(); j++) {
                 float[] oldPos = blip.trail.get(j);
                 float ageFactor = (float)(j + 1) / (blip.trail.size() + 1);
@@ -92,13 +99,13 @@ public class CircularTargetLayer {
                 if (pointOpacity < 0.05f) pointOpacity = 0.05f;
                 
                 shader.setTint(gl, 1.0f, 1.0f, 1.0f, pointOpacity);
-                camera.modelMatrix(matrix, oldPos[0], oldPos[1], TARGET_SIZE * 0.7f, TARGET_SIZE * 0.7f);
+                camera.modelMatrix(matrix, oldPos[0], oldPos[1], currentTargetSize * 0.7f, currentTargetSize * 0.7f);
                 shader.setMatrix(gl, matrix);
                 gl.glDrawArrays(GL.GL_TRIANGLES, 0, Geometry.TARGET_VERTEX_COUNT);
             }
 
             shader.setTint(gl, 1.0f, 1.0f, 1.0f, opacity);
-            camera.modelMatrix(matrix, blip.x, blip.y, TARGET_SIZE, TARGET_SIZE);
+            camera.modelMatrix(matrix, blip.x, blip.y, currentTargetSize, currentTargetSize);
             shader.setMatrix(gl, matrix);
             gl.glDrawArrays(GL.GL_TRIANGLES, 0, Geometry.TARGET_VERTEX_COUNT);
         }

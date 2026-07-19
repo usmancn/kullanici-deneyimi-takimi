@@ -8,6 +8,7 @@ import com.radar.gl.core.Geometry;
 import com.radar.gl.core.GlBuffer;
 import com.radar.gl.core.ShaderProgram;
 import com.radar.gl.core.TargetGeometry;
+import com.radar.gl.core.Matrices;
 import com.radar.gl.layers.CircularTargetLayer;
 
 import java.util.Map;
@@ -54,12 +55,19 @@ public class CircularMinimap {
 
         gl.glViewport(minimapX, minimapY, minimapWidth, minimapHeight);
 
+        // Kendi ufak arka planini cizmek icin scissor test ve glClear kullaniyoruz
         gl.glEnable(GL.GL_SCISSOR_TEST);
         gl.glScissor(minimapX, minimapY, minimapWidth, minimapHeight);
-        gl.glClearColor(BG_R, BG_G, BG_B, 1f);
+        gl.glClearColor(0.01f, 0.09f, 0.05f, 1f); // Koyu arka plan
         gl.glClear(GL.GL_COLOR_BUFFER_BIT);
         gl.glDisable(GL.GL_SCISSOR_TEST);
-        gl.glClearColor(MAIN_BG_R, MAIN_BG_G, MAIN_BG_B, 1f);
+        
+        // Ana radar alaninin arka plan rengini geri yukle
+        gl.glClearColor(0.02f, 0.15f, 0.08f, 1f);
+
+        shader.use(gl);
+        Matrices.identity(matrix);
+        shader.setMatrix(gl, matrix);
 
         // hedefler
         shader.bindPosition(gl, geometry.position.id());
