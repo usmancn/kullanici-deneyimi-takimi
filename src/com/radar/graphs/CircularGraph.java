@@ -121,6 +121,7 @@ public class CircularGraph extends GLCanvas implements GLEventListener, IGraph {
         shader.init(gl);
         targetGeometry.init(gl);
         minimap.init(gl);
+        markLayer.init(gl);
     }
 
     @Override
