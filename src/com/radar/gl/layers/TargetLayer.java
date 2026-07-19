@@ -28,7 +28,8 @@ public class TargetLayer {
     /** Gemi izinin (Blip) hafizada tutulacagi yapi */
     public static class Blip {
         public float x, y;
-        public float hitScanY; // Cizgi uzerinden gectiginde cizginin konumu
+        public float hitScanY;
+        public java.util.List<float[]> trail = new java.util.ArrayList<>();
     }
 
     private final TargetGeometry geometry;
@@ -40,13 +41,30 @@ public class TargetLayer {
     public void draw(GL2 gl, ShaderProgram shader, Camera camera,
                      List<ISimulationEntity> detected, float currentScanY) {
                      
-        // 1. Yeni tespit edilenleri hafizaya kaydet (Donma islemi)
+        // 1. Yeni tespit edilenleri hafizaya kaydet (Donma islemi ve Iz olusturma)
         for (int i = 0; i < detected.size(); i++) {
             ISimulationEntity entity = detected.get(i);
             Blip blip = memory.computeIfAbsent(entity.getId(), k -> new Blip());
             Vector2D pos = entity.getPosition();
-            blip.x = (float) pos.x;
-            blip.y = (float) pos.y;
+            
+            if (blip.trail.isEmpty()) {
+                blip.x = (float) pos.x;
+                blip.y = (float) pos.y;
+                blip.trail.add(new float[]{blip.x, blip.y});
+            } else {
+                float distSinceLastHit = currentScanY - blip.hitScanY;
+                if (distSinceLastHit < 0) distSinceLastHit += Camera.WORLD_SIZE;
+                
+                // Yeni bir sweep ulastiginda gecmis pozisyonu ize ekle
+                if (distSinceLastHit > 50f) {
+                    blip.trail.add(new float[]{blip.x, blip.y});
+                    if (blip.trail.size() > 15) {
+                        blip.trail.remove(0);
+                    }
+                    blip.x = (float) pos.x;
+                    blip.y = (float) pos.y;
+                }
+            }
             blip.hitScanY = currentScanY;
         }
 
@@ -68,8 +86,21 @@ public class TargetLayer {
             float opacity = 1.0f - 0.8f * (distance / Camera.WORLD_SIZE);
             if (opacity < 0.2f) opacity = 0.2f;
 
-            shader.setTint(gl, 1.0f, 1.0f, 1.0f, opacity);
+            // Izleri ciz
+            for (int j = 0; j < blip.trail.size(); j++) {
+                float[] oldPos = blip.trail.get(j);
+                float ageFactor = (float)(j + 1) / (blip.trail.size() + 1); // 0.0 ile 1.0 arasi, eski noktalar daha silik
+                float pointOpacity = opacity * ageFactor * 0.6f;
+                if (pointOpacity < 0.05f) pointOpacity = 0.05f;
+                
+                shader.setTint(gl, 1.0f, 1.0f, 1.0f, pointOpacity);
+                camera.modelMatrix(matrix, oldPos[0], oldPos[1], TARGET_SIZE * 0.7f, TARGET_SIZE * 0.7f);
+                shader.setMatrix(gl, matrix);
+                gl.glDrawArrays(GL.GL_TRIANGLES, 0, Geometry.TARGET_VERTEX_COUNT);
+            }
 
+            // Guncel konumu ciz
+            shader.setTint(gl, 1.0f, 1.0f, 1.0f, opacity);
             camera.modelMatrix(matrix,
                     blip.x, blip.y,
                     TARGET_SIZE, TARGET_SIZE);
