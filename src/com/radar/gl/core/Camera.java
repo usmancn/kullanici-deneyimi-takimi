@@ -13,8 +13,8 @@ public class Camera {
     public static final float WORLD_SIZE = 1000f;
     public static final float MIN_VIEW_RANGE = 40f;
 
-    private volatile float minX = 0f, maxX = WORLD_SIZE;
-    private volatile float minY = 0f, maxY = WORLD_SIZE;
+    private volatile float minX = -25f, maxX = WORLD_SIZE + 25f;
+    private volatile float minY = -25f, maxY = WORLD_SIZE + 25f;
 
     public float minX() { return minX; }
     public float maxX() { return maxX; }

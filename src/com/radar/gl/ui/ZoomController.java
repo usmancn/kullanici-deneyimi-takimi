@@ -50,7 +50,7 @@ public class ZoomController {
 
         float newRange = (max - min) * factor;
         if (newRange < Camera.MIN_VIEW_RANGE) newRange = Camera.MIN_VIEW_RANGE;
-        if (newRange > Camera.WORLD_SIZE)     newRange = Camera.WORLD_SIZE;
+        if (newRange > Camera.WORLD_SIZE * 1.05f) newRange = Camera.WORLD_SIZE * 1.05f;
 
         if (anchor == ANCHOR_LOW) {
             max = min + newRange;

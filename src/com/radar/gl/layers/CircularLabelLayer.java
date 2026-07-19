@@ -11,7 +11,7 @@ import com.jogamp.opengl.util.awt.TextRenderer;
  */
 public class CircularLabelLayer {
 
-    private static final int FONT_SIZE = 12;
+    private static final int FONT_SIZE = 16;
     private static final int PADDING = 6;
     private TextRenderer text;
 
@@ -36,14 +36,41 @@ public class CircularLabelLayer {
 
         // --- Aci etiketleri ---
         int radialLines = 12;
+        
+        // Ekrana sigdirmak icin padding (dunya koordinatinda ne kadar yer kapliyor)
+        float padWorldX = camera.rangeX() * (35f / width);
+        float padWorldY = camera.rangeY() * (25f / height);
+        
+        float boundMinX = camera.minX() + padWorldX;
+        float boundMaxX = camera.maxX() - padWorldX;
+        float boundMinY = camera.minY() + padWorldY;
+        float boundMaxY = camera.maxY() - padWorldY;
+
         for (int i = 0; i < radialLines; i++) {
             int degree = i * 30;
             // OpenGL acilari saatin tersi yonundedir, matematige gore hesapliyoruz
             double angle = 2.0 * Math.PI * i / radialLines;
+            float cos = (float) Math.cos(angle);
+            float sin = (float) Math.sin(angle);
             
-            // Etiketi cemberin biraz disina koymak icin yaricapi biraz buyutuyoruz (maxRadius * 1.05)
-            float worldX = cx + (maxRadius * 1.02f) * (float) Math.cos(angle);
-            float worldY = cy + (maxRadius * 1.02f) * (float) Math.sin(angle);
+            // Isin (ray) ile ekran sinirlarinin (bounding box) kesisimini bulalim
+            float t = Float.MAX_VALUE;
+            if (cos > 0.001f) t = Math.min(t, (boundMaxX - cx) / cos);
+            else if (cos < -0.001f) t = Math.min(t, (boundMinX - cx) / cos);
+            
+            if (sin > 0.001f) t = Math.min(t, (boundMaxY - cy) / sin);
+            else if (sin < -0.001f) t = Math.min(t, (boundMinY - cy) / sin);
+            
+            if (t < 0) t = 0f;
+            
+            // Istenen normal mesafe cemberin biraz disidir
+            float desiredDistance = maxRadius * 1.02f;
+            
+            // Hangisi daha kucukse onu aliyoruz (boylece zoom yapinca etiketler ekranda kalir)
+            float finalDistance = Math.min(desiredDistance, t);
+            
+            float worldX = cx + finalDistance * cos;
+            float worldY = cy + finalDistance * sin;
             
             // Dunya koordinatini ekran koordinatina cevir
             int pixelX = Math.round((worldX - camera.minX()) / camera.rangeX() * width);
