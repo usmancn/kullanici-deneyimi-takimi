@@ -52,7 +52,8 @@ public class CircularGridLayer {
         float cy = Camera.WORLD_SIZE / 2f;
         float maxRadius = Camera.WORLD_SIZE / 2f;
 
-        shader.setTint(gl, R, G, B, 0.4f);
+        // Renk: Cizgilerin x y ekseni gibi beyaz ve belirgin olmasi istendi
+        shader.setTint(gl, 1.0f, 1.0f, 1.0f, 0.4f);
         gl.glLineWidth(1f);
         // -- Ic ice halkalari ciz (Sonar gibi dalga dalga)
         shader.bindPositionOnly(gl, circleBuffer, 2);
@@ -67,7 +68,7 @@ public class CircularGridLayer {
 
         // -- Radyal (Aci) cizgilerini ciz
         shader.bindPositionOnly(gl, lineBuffer, 2);
-        camera.modelMatrix(matrix, 0, 0, Camera.WORLD_SIZE, Camera.WORLD_SIZE);
+        camera.modelMatrix(matrix, cx, cy, Camera.WORLD_SIZE, Camera.WORLD_SIZE);
         shader.setMatrix(gl, matrix);
         gl.glDrawArrays(GL.GL_LINES, 0, RADIAL_LINES * 2);
     }
