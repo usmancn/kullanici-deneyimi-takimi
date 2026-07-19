@@ -13,7 +13,7 @@ import java.awt.Font;
 /**
  * Dairesel (Circular) grafik.
  *
- * <p><b>TODO (Altay):</b> Bu iskelet sinifa Circular grafigini implemente et.
+ * <p><b>TODO:</b> Bu iskelet sinifa Circular grafigini implemente et.
  * {@link IGraph} arayuzunu zaten implement ediyor; {@link #startGraph()} ve
  * {@link #stopGraph()} metodlarini istege gore genisletebilirsin.</p>
  *
@@ -40,12 +40,12 @@ public class CircularGraph extends JPanel implements IGraph {
 
     @Override
     public void startGraph() {
-        // TODO: Altay — animasyonu / timer'i baslatiniz
+        // TODO: animasyonu / timer'i baslatiniz
     }
 
     @Override
     public void stopGraph() {
-        // TODO: Altay — animasyonu / timer'i durdurunuz
+        // TODO: animasyonu / timer'i durdurunuz
     }
 
     // ------------------------------------------------------------------ //
@@ -56,7 +56,7 @@ public class CircularGraph extends JPanel implements IGraph {
         setBackground(new Color(10, 14, 12));
         setLayout(new BorderLayout());
 
-        JLabel label = new JLabel("Circular Graph — Yakında (Altay)", SwingConstants.CENTER);
+        JLabel label = new JLabel("Circular Graph — Yakında", SwingConstants.CENTER);
         label.setForeground(new Color(80, 255, 160));
         label.setFont(new Font("SansSerif", Font.BOLD, 22));
         add(label, BorderLayout.CENTER);

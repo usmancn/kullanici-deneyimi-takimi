@@ -13,7 +13,7 @@ import java.awt.Font;
 /**
  * Selaleli (Waterfall) grafik.
  *
- * <p><b>TODO (Fatih):</b> Bu iskelet sinifa Waterfall grafigini implemente et.
+ * <p><b>TODO:</b> Bu iskelet sinifa Waterfall grafigini implemente et.
  * {@link IGraph} arayuzunu zaten implement ediyor; {@link #startGraph()} ve
  * {@link #stopGraph()} metodlarini istege gore genisletebilirsin.</p>
  *
@@ -40,12 +40,12 @@ public class WaterfallGraph extends JPanel implements IGraph {
 
     @Override
     public void startGraph() {
-        // TODO: Fatih — animasyonu / timer'i baslatiniz
+        // TODO: animasyonu / timer'i baslatiniz
     }
 
     @Override
     public void stopGraph() {
-        // TODO: Fatih — animasyonu / timer'i durdurunuz
+        // TODO: animasyonu / timer'i durdurunuz
     }
 
     // ------------------------------------------------------------------ //
@@ -56,7 +56,7 @@ public class WaterfallGraph extends JPanel implements IGraph {
         setBackground(new Color(10, 12, 18));
         setLayout(new BorderLayout());
 
-        JLabel label = new JLabel("Waterfall Graph — Yakında (Fatih)", SwingConstants.CENTER);
+        JLabel label = new JLabel("Waterfall Graph — Yakında", SwingConstants.CENTER);
         label.setForeground(new Color(80, 200, 255));
         label.setFont(new Font("SansSerif", Font.BOLD, 22));
         add(label, BorderLayout.CENTER);

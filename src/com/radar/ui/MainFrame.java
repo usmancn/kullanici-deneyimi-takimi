@@ -32,9 +32,9 @@ import java.awt.Font;
 @SuppressWarnings("serial")
 public final class MainFrame extends JFrame {
 
-    private static final String TAB_RADAR     = "Radar (Osman)";
-    private static final String TAB_WATERFALL = "Waterfall (Fatih)";
-    private static final String TAB_CIRCULAR  = "Circular (Altay)";
+    private static final String TAB_RADAR     = "Radar";
+    private static final String TAB_WATERFALL = "Waterfall";
+    private static final String TAB_CIRCULAR  = "Circular";
     private static final String TAB_METRICS   = "Sistem Metrikleri";
 
     private final SimulationEngine engine;
@@ -138,9 +138,21 @@ public final class MainFrame extends JFrame {
         // Metrik paneli: CPU + GPU yan yana
         MetricsSplitPanel metricsPanel = new MetricsSplitPanel(cpuPanel, gpuPanel);
 
-        // AWT GLCanvas bileşeninin Swing içinde düzgün boyutlanması için JPanel (BorderLayout) ile sarıyoruz
-        javax.swing.JPanel radarWrapper = new javax.swing.JPanel(new java.awt.BorderLayout());
-        radarWrapper.add(radarComp, java.awt.BorderLayout.CENTER);
+        // AWT GLCanvas bileşeninin Swing içinde düzgün boyutlanması ve her zaman KARE kalması için özel JPanel
+        javax.swing.JPanel radarWrapper = new javax.swing.JPanel() {
+            @Override
+            public void doLayout() {
+                if (getComponentCount() > 0) {
+                    int size = Math.min(getWidth(), getHeight());
+                    int x = (getWidth() - size) / 2;
+                    int y = (getHeight() - size) / 2;
+                    getComponent(0).setBounds(x, y, size, size);
+                }
+            }
+        };
+        radarWrapper.setLayout(null);
+        radarWrapper.setBackground(new Color(10, 10, 16));
+        radarWrapper.add(radarComp);
 
         tabs.addTab(TAB_RADAR,     radarWrapper);
         tabs.addTab(TAB_WATERFALL, waterfallComp);
