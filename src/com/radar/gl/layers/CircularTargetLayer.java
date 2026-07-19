@@ -85,12 +85,27 @@ public class CircularTargetLayer {
             float opacity = 1.0f - 0.8f * (radialDistance / maxRadius);
             if (opacity < 0.2f) opacity = 0.2f;
 
-            // Merkeze olan uzakliga gore hedefin boyutunu buyut (Gercekci radar yay etkisi)
-            double distSq = (blip.x - cx)*(blip.x - cx) + (blip.y - cy)*(blip.y - cy);
+            // Gercekci Radar Beamwidth (Huzme) Etkisi:
+            // Radyal kalinlik (Pulse length) sabittir. Tegetsel genislik (Beam width) uzaklikla artar.
+            double dx = blip.x - cx;
+            double dy = blip.y - cy;
+            double distSq = dx*dx + dy*dy;
             float distFromCenter = (float) Math.sqrt(distSq);
-            // Merkezde 1x, en dista 3.5x olacak sekilde olceklendir
-            float scaleFactor = 1.0f + (distFromCenter / maxRadius) * 2.5f;
-            float currentTargetSize = TARGET_SIZE * scaleFactor;
+            
+            // 2.5 derecelik bir radar beam width varsayiyoruz
+            float beamAngle = (float) Math.toRadians(2.5);
+            float arcWidth = Math.max(TARGET_SIZE, distFromCenter * beamAngle);
+            float thickness = TARGET_SIZE; // Radyal kalinlik sabit
+
+            float theta = (float) Math.atan2(dy, dx);
+            float cos = (float) Math.cos(theta);
+            float sin = (float) Math.sin(theta);
+            
+            float hw = arcWidth / 2f;
+            float ht = thickness / 2f;
+            
+            float sx = 2f / camera.rangeX();
+            float sy = 2f / camera.rangeY();
 
             for (int j = 0; j < blip.trail.size(); j++) {
                 float[] oldPos = blip.trail.get(j);
@@ -99,13 +114,32 @@ public class CircularTargetLayer {
                 if (pointOpacity < 0.05f) pointOpacity = 0.05f;
                 
                 shader.setTint(gl, 1.0f, 1.0f, 1.0f, pointOpacity);
-                camera.modelMatrix(matrix, oldPos[0], oldPos[1], currentTargetSize * 0.7f, currentTargetSize * 0.7f);
+                
+                // Gecmis izleri biraz daha kucuk ciziyoruz (yay formunu koruyarak)
+                float hwTrail = hw * 0.7f;
+                float htTrail = ht * 0.7f;
+                
+                float dxTrail = oldPos[0] - cx;
+                float dyTrail = oldPos[1] - cy;
+                float thetaTrail = (float) Math.atan2(dyTrail, dxTrail);
+                float cosT = (float) Math.cos(thetaTrail);
+                float sinT = (float) Math.sin(thetaTrail);
+
+                matrix[0] = hwTrail * (-sinT) * sx; matrix[4] = htTrail * cosT * sx; matrix[8] = 0; matrix[12] = (oldPos[0] - camera.minX()) * sx - 1f;
+                matrix[1] = hwTrail * cosT * sy;    matrix[5] = htTrail * sinT * sy; matrix[9] = 0; matrix[13] = (oldPos[1] - camera.minY()) * sy - 1f;
+                matrix[2] = 0;                      matrix[6] = 0;                   matrix[10]= 1; matrix[14] = 0;
+                matrix[3] = 0;                      matrix[7] = 0;                   matrix[11]= 0; matrix[15] = 1;
+
                 shader.setMatrix(gl, matrix);
                 gl.glDrawArrays(GL.GL_TRIANGLES, 0, Geometry.TARGET_VERTEX_COUNT);
             }
 
             shader.setTint(gl, 1.0f, 1.0f, 1.0f, opacity);
-            camera.modelMatrix(matrix, blip.x, blip.y, currentTargetSize, currentTargetSize);
+            matrix[0] = hw * (-sin) * sx; matrix[4] = ht * cos * sx; matrix[8] = 0; matrix[12] = (blip.x - camera.minX()) * sx - 1f;
+            matrix[1] = hw * cos * sy;    matrix[5] = ht * sin * sy; matrix[9] = 0; matrix[13] = (blip.y - camera.minY()) * sy - 1f;
+            matrix[2] = 0;                matrix[6] = 0;             matrix[10]= 1; matrix[14] = 0;
+            matrix[3] = 0;                matrix[7] = 0;             matrix[11]= 0; matrix[15] = 1;
+            
             shader.setMatrix(gl, matrix);
             gl.glDrawArrays(GL.GL_TRIANGLES, 0, Geometry.TARGET_VERTEX_COUNT);
         }
