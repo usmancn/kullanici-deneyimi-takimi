@@ -4,6 +4,8 @@ import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
 
 import com.radar.gl.core.Camera;
+import com.radar.gl.core.CircularProjection;
+import com.radar.gl.core.GainColor;
 import com.radar.gl.core.Geometry;
 import com.radar.gl.core.GlBuffer;
 import com.radar.gl.core.ShaderProgram;
@@ -21,7 +23,6 @@ import java.nio.FloatBuffer;
  */
 public class CircularMinimap {
 
-    private static final float SQUARE_SIZE    = 10f;
     private static final float RECT_INSET     = 6f;
 
 
@@ -70,22 +71,27 @@ public class CircularMinimap {
         // hedefler
         shader.bindPosition(gl, geometry.position.id());
         shader.bindColor(gl, geometry.targetColor.id());
-        
+
         float maxRadius = Camera.WORLD_SIZE / 2f * 0.92f;
 
         for (CircularTargetLayer.CircularBlip blip : blips.values()) {
+            // Gain filtresi: aralik disindaki gemileri minimap'te de gizle.
+            if (!GainColor.passesFilter(blip.gain)) continue;
+
             float distance = scanRadius - blip.hitRadius;
             if (distance < 0) distance += maxRadius;
-            
+
             float opacity = 1.0f - 0.8f * (distance / maxRadius);
             if (opacity < 0.2f) opacity = 0.2f;
 
-            shader.setTint(gl, 1f, 1f, 1f, opacity);
-            Camera.worldMatrix(matrix, blip.x, blip.y, SQUARE_SIZE, SQUARE_SIZE);
+            GainColor.applyGainColor(gl, shader, blip.gain, opacity);
+            // Konumlarla ayni menzil sikismasini (rangeScale) boyuta da uygula.
+            float sizeScale = CircularProjection.rangeScale();
+            Camera.worldMatrix(matrix, blip.x, blip.y, blip.width * sizeScale, blip.height * sizeScale);
             shader.setMatrix(gl, matrix);
             gl.glDrawArrays(GL.GL_TRIANGLES, 0, Geometry.TARGET_VERTEX_COUNT);
         }
-        shader.resetTint(gl);
+        GainColor.reset(gl, shader);
 
         // tarama dalgasi
         shader.setTint(gl, 0.3f, 1.0f, 0.4f, 0.9f);

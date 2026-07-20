@@ -33,6 +33,42 @@ public final class SimulationConfig {
     private int shipSize = 10;
 
     /**
+     * Bir geminin gövde boyutunun (genişlik/yükseklik) metre cinsinden alt sınırı.
+     * Gemiler spawn olurken x ve y boyutları [minShipDimension, maxShipDimension]
+     * aralığında birbirinden bağımsız rastgele seçilir.
+     */
+    private float minShipDimension = 5.0f;
+
+    /** Bir geminin gövde boyutunun metre cinsinden üst sınırı. */
+    private float maxShipDimension = 20.0f;
+
+    /**
+     * En küçük gemiye (minShipDimension²) atanacak gain factor değeri.
+     * Gain factor gemi alanı ile doğru orantılı olarak
+     * [minGainFactor, maxGainFactor] aralığına eşlenir.
+     */
+    private float minGainFactor = 0.20f;
+
+    /** En büyük gemiye (maxShipDimension²) atanacak gain factor değeri. */
+    private float maxGainFactor = 1.00f;
+
+    // -------------------------------------------------------------------------
+    // Gain Filtresi (RangeSlider ile kontrol edilir)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Gain filtresinin alt eşiği. Bu değerin altında gain'e sahip gemiler
+     * radarda ve minimap'te çizilmez. UI (EDT) yazar, render thread okur.
+     */
+    private volatile float gainFilterMin = 0.0f;
+
+    /**
+     * Gain filtresinin üst eşiği. Bu değerin üstünde gain'e sahip gemiler
+     * radarda ve minimap'te çizilmez. UI (EDT) yazar, render thread okur.
+     */
+    private volatile float gainFilterMax = 1.0f;
+
+    /**
      * Bir geminin bıraktığı izin kaç adım (snapshot) geriye gideceği.
      * Daha büyük değer → daha uzun kuyruk.
      */
@@ -64,6 +100,13 @@ public final class SimulationConfig {
 
     /** Gemilerin minimum hareket hızı (piksel/saniye). */
     private float minShipSpeed = 6.0f;
+
+    /**
+     * Çakışmasız yerleştirme sırasında bir gemi için denenecek maksimum rastgele
+     * konum sayısı. Bu kadar denemede boş yer bulunamazsa gemi o tick eklenmez
+     * (bir sonraki tick tekrar denenir). Alan çok dolduğunda sonsuz döngüyü önler.
+     */
+    private int placementMaxAttempts = 200;
 
     // -------------------------------------------------------------------------
     // Metrik Paneli
@@ -224,6 +267,71 @@ public final class SimulationConfig {
         this.shipSize = shipSize;
     }
 
+    public float getMinShipDimension() {
+        return minShipDimension;
+    }
+
+    public void setMinShipDimension(float minShipDimension) {
+        if (minShipDimension <= 0) {
+            throw new IllegalArgumentException("minShipDimension pozitif olmalidir: " + minShipDimension);
+        }
+        this.minShipDimension = minShipDimension;
+    }
+
+    public float getMaxShipDimension() {
+        return maxShipDimension;
+    }
+
+    public void setMaxShipDimension(float maxShipDimension) {
+        if (maxShipDimension < minShipDimension) {
+            throw new IllegalArgumentException(
+                    "maxShipDimension, minShipDimension'dan kucuk olamaz: " + maxShipDimension);
+        }
+        this.maxShipDimension = maxShipDimension;
+    }
+
+    public float getMinGainFactor() {
+        return minGainFactor;
+    }
+
+    public void setMinGainFactor(float minGainFactor) {
+        if (minGainFactor < 0.0f || minGainFactor > 1.0f) {
+            throw new IllegalArgumentException("minGainFactor [0.0, 1.0] araliginda olmalidir: " + minGainFactor);
+        }
+        this.minGainFactor = minGainFactor;
+    }
+
+    public float getMaxGainFactor() {
+        return maxGainFactor;
+    }
+
+    public void setMaxGainFactor(float maxGainFactor) {
+        if (maxGainFactor < 0.0f || maxGainFactor > 1.0f) {
+            throw new IllegalArgumentException("maxGainFactor [0.0, 1.0] araliginda olmalidir: " + maxGainFactor);
+        }
+        this.maxGainFactor = maxGainFactor;
+    }
+
+    public float getGainFilterMin() {
+        return gainFilterMin;
+    }
+
+    public void setGainFilterMin(float gainFilterMin) {
+        if (gainFilterMin < 0.0f) gainFilterMin = 0.0f;
+        if (gainFilterMin > 1.0f) gainFilterMin = 1.0f;
+        this.gainFilterMin = gainFilterMin;
+    }
+
+    public float getGainFilterMax() {
+        return gainFilterMax;
+    }
+
+    public void setGainFilterMax(float gainFilterMax) {
+        if (gainFilterMax < 0.0f) gainFilterMax = 0.0f;
+        if (gainFilterMax > 1.0f) gainFilterMax = 1.0f;
+        this.gainFilterMax = gainFilterMax;
+    }
+
     public int getTrailLength() {
         return trailLength;
     }
@@ -271,6 +379,17 @@ public final class SimulationConfig {
 
     public void setMinShipSpeed(float minShipSpeed) {
         this.minShipSpeed = minShipSpeed;
+    }
+
+    public int getPlacementMaxAttempts() {
+        return placementMaxAttempts;
+    }
+
+    public void setPlacementMaxAttempts(int placementMaxAttempts) {
+        if (placementMaxAttempts <= 0) {
+            throw new IllegalArgumentException("placementMaxAttempts pozitif olmalidir: " + placementMaxAttempts);
+        }
+        this.placementMaxAttempts = placementMaxAttempts;
     }
 
     public int getMetricsUpdateHz() {

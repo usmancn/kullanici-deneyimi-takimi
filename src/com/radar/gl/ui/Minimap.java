@@ -4,6 +4,7 @@ import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
 
 import com.radar.gl.core.Camera;
+import com.radar.gl.core.GainColor;
 import com.radar.gl.core.Geometry;
 import com.radar.gl.core.GlBuffer;
 import com.radar.gl.core.ShaderProgram;
@@ -23,7 +24,6 @@ public class Minimap {
     /** Minimap ekranin bu oraninda; sol ustte durur. */
     public static final float FRACTION = 0.25f;
 
-    private static final float SQUARE_SIZE    = 10f;
     private static final float SCAN_THICKNESS = 6f;
     private static final float RECT_INSET     = 6f;
 
@@ -63,20 +63,23 @@ public class Minimap {
         // hedefler
         shader.bindPosition(gl, geometry.position.id());
         shader.bindColor(gl, geometry.targetColor.id());
-        
+
         for (TargetLayer.Blip blip : blips.values()) {
+            // Gain filtresi: aralik disindaki gemileri minimap'te de gizle.
+            if (!GainColor.passesFilter(blip.gain)) continue;
+
             float distance = scanY - blip.hitScanY;
             if (distance < 0) distance += Camera.WORLD_SIZE;
-            
+
             float opacity = 1.0f - 0.8f * (distance / Camera.WORLD_SIZE);
             if (opacity < 0.2f) opacity = 0.2f;
 
-            shader.setTint(gl, 1f, 1f, 1f, opacity);
-            Camera.worldMatrix(matrix, blip.x, blip.y, SQUARE_SIZE, SQUARE_SIZE);
+            GainColor.applyGainColor(gl, shader, blip.gain, opacity);
+            Camera.worldMatrix(matrix, blip.x, blip.y, blip.width, blip.height);
             shader.setMatrix(gl, matrix);
             gl.glDrawArrays(GL.GL_TRIANGLES, 0, Geometry.TARGET_VERTEX_COUNT);
         }
-        shader.resetTint(gl);
+        GainColor.reset(gl, shader);
 
         // tarama cizgisi
         shader.bindColor(gl, geometry.greenColor.id());

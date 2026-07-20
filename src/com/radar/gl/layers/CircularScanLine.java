@@ -5,6 +5,7 @@ import com.jogamp.opengl.GL2;
 import com.radar.sim.core.ISimulationEntity;
 import com.radar.sim.engine.EntityManager;
 import com.radar.gl.core.Camera;
+import com.radar.gl.core.CircularProjection;
 import com.radar.gl.core.ShaderProgram;
 
 import java.nio.FloatBuffer;
@@ -49,12 +50,12 @@ public class CircularScanLine {
         float deltaSec = (now - lastTimeNs) / 1_000_000_000f;
         lastTimeNs = now;
 
-        float maxRadius = Camera.WORLD_SIZE / 2f * 0.92f;
+        float maxRadius = CircularProjection.maxRadius();
         float speed = maxRadius / SCAN_PERIOD_SEC;
-        
+
         float prevRadius = scanRadius;
         scanRadius += speed * deltaSec;
-        
+
         boolean wrapped = false;
         if (scanRadius >= maxRadius) {
             scanRadius -= maxRadius;
@@ -62,18 +63,11 @@ public class CircularScanLine {
         }
 
         detected.clear();
-        float cx = Camera.WORLD_SIZE / 2f;
-        float cy = Camera.WORLD_SIZE / 2f;
 
         for (ISimulationEntity entity : entityManager.getAll()) {
-            double ex = entity.getPosition().x;
-            double ey = entity.getPosition().y;
-            
-            // Geminin merkeze olan uzakligi
-            double distSq = (ex - cx)*(ex - cx) + (ey - cy)*(ey - cy);
-            if (distSq > maxRadius * maxRadius) continue;
-            
-            double targetRadius = Math.sqrt(distSq);
+            // Polar esleme: y -> menzil (radius). Tum y degerleri diske sigdigindan
+            // kirpma yok; hicbir gemi kaybolmaz.
+            double targetRadius = CircularProjection.radius(entity.getPosition().y);
 
             // Gemi eski dalga capi ile yeni dalga capi arasinda mi kaldi?
             boolean isHit = false;

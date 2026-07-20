@@ -10,9 +10,11 @@ import com.jogamp.opengl.GL2ES2;
  * Vertex + fragment shader'i derler/linkler; attribute ve uniform konumlarini
  * tutar; VBO baglama, matris ve tint (renk carpani) yukleme yardimcilarini saglar.
  *
- * Orijinaldeki shader'a "tint" uniform'u eklendi: outColor = inColor * tint.
- * Boylece ayni hedef geometrisi, gain factor'e gore farkli parlaklikta cizilebiliyor.
- * tint varsayilan (1,1,1,1) oldugu icin diger katmanlarin gorunumu degismez.
+ * Orijinaldeki shader'a "tint" (carpimsal) ve "addColor" (toplamsal) uniform'lari eklendi:
+ *   outColor = inColor * tint + addColor
+ * tint parlaklik/opaklik icin, addColor ise mevcut renge EKSTRA bir ton eklemek icin
+ * kullanilir (or. kirmizi taban gradyanina gain'e bagli mavi eklemek). Ikisi de
+ * varsayilan (tint=1,1,1,1; addColor=0,0,0,0) oldugu icin diger katmanlar degismez.
  */
 public class ShaderProgram {
 
@@ -20,12 +22,13 @@ public class ShaderProgram {
         "#version 120\n" +
         "uniform mat4 matrix;\n" +
         "uniform vec4 tint;\n" +
+        "uniform vec4 addColor;\n" +
         "attribute vec4 inPosition;\n" +
         "attribute vec4 inColor;\n" +
         "varying vec4 outColor;\n" +
         "void main()\n" +
         "{\n" +
-        "    outColor = inColor * tint;\n" +
+        "    outColor = inColor * tint + addColor;\n" +
         "    gl_Position = matrix * inPosition;\n" +
         "}\n";
 
@@ -42,6 +45,7 @@ public class ShaderProgram {
     private int attribColor;
     private int uniformMatrix;
     private int uniformTint;
+    private int uniformAddColor;
 
     public void init(GL2 gl) {
         int vertexShader   = compile(gl, GL2ES2.GL_VERTEX_SHADER,   VERTEX_120);
@@ -68,9 +72,11 @@ public class ShaderProgram {
         attribColor = gl.glGetAttribLocation(program, "inColor");
         gl.glEnableVertexAttribArray(attribColor);
 
-        uniformMatrix = gl.glGetUniformLocation(program, "matrix");
-        uniformTint   = gl.glGetUniformLocation(program, "tint");
+        uniformMatrix   = gl.glGetUniformLocation(program, "matrix");
+        uniformTint     = gl.glGetUniformLocation(program, "tint");
+        uniformAddColor = gl.glGetUniformLocation(program, "addColor");
         resetTint(gl);
+        resetAddColor(gl);
     }
 
     public void use(GL2 gl) { gl.glUseProgram(program); }
@@ -119,6 +125,13 @@ public class ShaderProgram {
     }
 
     public void resetTint(GL2 gl) { setTint(gl, 1f, 1f, 1f, 1f); }
+
+    /** Renge eklenecek toplamsal terim (outColor = inColor*tint + addColor). */
+    public void setAddColor(GL2 gl, float r, float g, float b, float a) {
+        gl.glUniform4f(uniformAddColor, r, g, b, a);
+    }
+
+    public void resetAddColor(GL2 gl) { setAddColor(gl, 0f, 0f, 0f, 0f); }
 
     public void dispose(GL2 gl) {
         disableAttribs(gl);

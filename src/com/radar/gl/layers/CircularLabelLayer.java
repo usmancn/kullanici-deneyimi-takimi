@@ -84,17 +84,19 @@ public class CircularLabelLayer {
             text.draw(lbl, pixelX - textWidth / 2, height - pixelY - textHeight / 2);
         }
 
-        // --- Menzil etiketleri (4 halka icin: 250, 500, 750, 1000 gibi) ---
-        // x ekseni uzerine dizecegiz (cx'ten saga dogru)
+        // --- Menzil etiketleri (4 halka: 250, 500, 750, 1000) ---
+        // Halkanin fiziksel yeri maxRadius*r; ustune yazilan menzil ise y-verisi
+        // (r * WORLD_SIZE), boylece kare radarla ayni 0..1000 olcegi gorunur.
+        // x ekseni uzerine dizilir (cx'ten saga dogru)
         for (float r = 0.25f; r <= 1.0f; r += 0.25f) {
             float worldX = cx + maxRadius * r;
             float worldY = cy;
-            
+
             int pixelX = Math.round((worldX - camera.minX()) / camera.rangeX() * width);
             int pixelY = Math.round((camera.maxY() - worldY) / camera.rangeY() * height);
-            
-            String lbl = String.valueOf(Math.round(maxRadius * r));
-            
+
+            String lbl = String.valueOf(Math.round(Camera.WORLD_SIZE * r));
+
             // Yazi cizginin biraz ustunde dursun
             text.draw(lbl, pixelX + PADDING, height - pixelY + PADDING);
         }

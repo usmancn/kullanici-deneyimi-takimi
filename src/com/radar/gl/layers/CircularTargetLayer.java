@@ -4,9 +4,12 @@ import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
 import com.radar.sim.core.ISimulationEntity;
 import com.radar.gl.core.Camera;
+import com.radar.gl.core.CircularProjection;
+import com.radar.gl.core.GainColor;
 import com.radar.gl.core.Geometry;
 import com.radar.gl.core.ShaderProgram;
 import com.radar.gl.core.TargetGeometry;
+import com.radar.sim.model.Ship;
 import com.radar.sim.model.Vector2D;
 
 import java.util.HashMap;
@@ -27,6 +30,11 @@ public class CircularTargetLayer {
     public static class CircularBlip {
         public float x, y;
         public float hitRadius; // Vuruldugu anki yaricapi
+        /** Geminin gain factor'u; renklendirme ve filtre icin saklanir. Varsayilan 1.0. */
+        public double gain = 1.0;
+        /** Geminin dunya birimindeki govde boyutlari (metre). Varsayilan TARGET_SIZE. */
+        public float width  = TARGET_SIZE;
+        public float height = TARGET_SIZE;
         public java.util.List<float[]> trail = new java.util.ArrayList<>();
     }
 
@@ -48,33 +56,47 @@ public class CircularTargetLayer {
             ISimulationEntity entity = detected.get(i);
             CircularBlip blip = memory.computeIfAbsent(entity.getId(), k -> new CircularBlip());
             Vector2D pos = entity.getPosition();
-            
+            // Polar esleme: x -> aci, y -> menzil. Gemi diskteki gorsel konumuna tasinir.
+            float dispX = (float) CircularProjection.worldX(pos.x, pos.y);
+            float dispY = (float) CircularProjection.worldY(pos.x, pos.y);
+            if (entity instanceof Ship) {
+                Ship ship = (Ship) entity;
+                blip.gain   = ship.getGainFactor();
+                blip.width  = (float) ship.getWidth();
+                blip.height = (float) ship.getHeight();
+            }
+
             if (blip.trail.isEmpty()) {
-                blip.x = (float) pos.x;
-                blip.y = (float) pos.y;
+                blip.x = dispX;
+                blip.y = dispY;
                 blip.trail.add(new float[]{blip.x, blip.y});
             } else {
-                if (Math.abs(blip.x - pos.x) > 0.5f || Math.abs(blip.y - pos.y) > 0.5f) {
+                if (Math.abs(blip.x - dispX) > 0.5f || Math.abs(blip.y - dispY) > 0.5f) {
                     blip.trail.add(new float[]{blip.x, blip.y});
                     if (blip.trail.size() > 15) {
                         blip.trail.remove(0);
                     }
                 }
-                blip.x = (float) pos.x;
-                blip.y = (float) pos.y;
+                blip.x = dispX;
+                blip.y = dispY;
             }
-            
-            double distSq = (pos.x - cx)*(pos.x - cx) + (pos.y - cy)*(pos.y - cy);
-            blip.hitRadius = (float) Math.sqrt(distSq);
+
+            blip.hitRadius = (float) CircularProjection.radius(pos.y);
         }
 
         shader.bindPosition(gl, geometry.position.id());
+        // Kirmizi geceli taban gradyani; uzerine gain'e bagli mavi eklenecek.
         shader.bindColor(gl, geometry.targetColor.id());
 
         Iterator<Map.Entry<UUID, CircularBlip>> it = memory.entrySet().iterator();
         while (it.hasNext()) {
             CircularBlip blip = it.next().getValue();
-            
+
+            // Gain filtresi: aralik disindaki gemileri gizle.
+            if (!GainColor.passesFilter(blip.gain)) {
+                continue;
+            }
+
             // Dalganin hedeften ne kadar uzaklastigini hesapla (wrap-around)
             float radialDistance = currentScanRadius - blip.hitRadius;
             if (radialDistance < 0) {
@@ -92,10 +114,14 @@ public class CircularTargetLayer {
             double distSq = dx*dx + dy*dy;
             float distFromCenter = (float) Math.sqrt(distSq);
             
-            // 2.5 derecelik bir radar beam width varsayiyoruz
+            // 2.5 derecelik bir radar beam width varsayiyoruz.
+            // Minimum tegetsel genislik gemi genisligine, radyal kalinlik gemi yuksekligine baglidir.
+            // Konumlar menzil ekseninde 0.46 ile sikistirildigi icin gemi boyutu da ayni
+            // oranla (rangeScale) olceklenir; boylece gemiler 0..1000 olceginde buyuk gorunmez.
+            float sizeScale = CircularProjection.rangeScale();
             float beamAngle = (float) Math.toRadians(2.5);
-            float arcWidth = Math.max(TARGET_SIZE, distFromCenter * beamAngle);
-            float thickness = TARGET_SIZE; // Radyal kalinlik sabit
+            float arcWidth = Math.max(blip.width * sizeScale, distFromCenter * beamAngle);
+            float thickness = blip.height * sizeScale; // Radyal kalinlik gemi boyutuna gore
 
             float theta = (float) Math.atan2(dy, dx);
             float cos = (float) Math.cos(theta);
@@ -112,9 +138,9 @@ public class CircularTargetLayer {
                 float ageFactor = (float)(j + 1) / (blip.trail.size() + 1);
                 float pointOpacity = opacity * ageFactor * 0.6f;
                 if (pointOpacity < 0.05f) pointOpacity = 0.05f;
-                
-                shader.setTint(gl, 1.0f, 1.0f, 1.0f, pointOpacity);
-                
+
+                GainColor.applyGainColor(gl, shader, blip.gain, pointOpacity);
+
                 // Gecmis izleri biraz daha kucuk ciziyoruz (yay formunu koruyarak)
                 float hwTrail = hw * 0.7f;
                 float htTrail = ht * 0.7f;
@@ -134,7 +160,7 @@ public class CircularTargetLayer {
                 gl.glDrawArrays(GL.GL_TRIANGLES, 0, Geometry.TARGET_VERTEX_COUNT);
             }
 
-            shader.setTint(gl, 1.0f, 1.0f, 1.0f, opacity);
+            GainColor.applyGainColor(gl, shader, blip.gain, opacity);
             matrix[0] = hw * (-sin) * sx; matrix[4] = ht * cos * sx; matrix[8] = 0; matrix[12] = (blip.x - camera.minX()) * sx - 1f;
             matrix[1] = hw * cos * sy;    matrix[5] = ht * sin * sy; matrix[9] = 0; matrix[13] = (blip.y - camera.minY()) * sy - 1f;
             matrix[2] = 0;                matrix[6] = 0;             matrix[10]= 1; matrix[14] = 0;
@@ -144,9 +170,9 @@ public class CircularTargetLayer {
             gl.glDrawArrays(GL.GL_TRIANGLES, 0, Geometry.TARGET_VERTEX_COUNT);
         }
 
-        shader.resetTint(gl);
+        GainColor.reset(gl, shader);
     }
-    
+
     public Map<UUID, CircularBlip> getMemory() {
         return memory;
     }

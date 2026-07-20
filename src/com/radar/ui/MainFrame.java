@@ -82,7 +82,7 @@ public final class MainFrame extends JFrame {
 
         // --- Sekmeli yapı ---
         this.tabbedPane = buildTabbedPane(
-                radarComp, waterfallComp, circularComp, initialGraph);
+                config, radarComp, waterfallComp, circularComp, initialGraph);
         getContentPane().add(tabbedPane);
 
         pack();
@@ -127,7 +127,8 @@ public final class MainFrame extends JFrame {
     // Sekme Yapısı
     // ------------------------------------------------------------------ //
 
-    private JTabbedPane buildTabbedPane(Component radarComp,
+    private JTabbedPane buildTabbedPane(SimulationConfig config,
+                                        Component radarComp,
                                         Component waterfallComp,
                                         Component circularComp,
                                         GraphType initialGraph) {
@@ -156,9 +157,21 @@ public final class MainFrame extends JFrame {
         radarWrapper.setBackground(new Color(10, 10, 16));
         radarWrapper.add(radarComp);
 
-        tabs.addTab(TAB_RADAR,     radarWrapper);
+        // Kare radar: canvas ortada, gain filtresi altta
+        javax.swing.JPanel radarTab = new javax.swing.JPanel(new java.awt.BorderLayout());
+        radarTab.setBackground(new Color(10, 10, 16));
+        radarTab.add(radarWrapper, java.awt.BorderLayout.CENTER);
+        radarTab.add(new GainFilterPanel(config), java.awt.BorderLayout.SOUTH);
+
+        // Yuvarlak radar: canvas ortada, gain filtresi altta
+        javax.swing.JPanel circularTab = new javax.swing.JPanel(new java.awt.BorderLayout());
+        circularTab.setBackground(new Color(10, 10, 16));
+        circularTab.add(circularComp, java.awt.BorderLayout.CENTER);
+        circularTab.add(new GainFilterPanel(config), java.awt.BorderLayout.SOUTH);
+
+        tabs.addTab(TAB_RADAR,     radarTab);
         tabs.addTab(TAB_WATERFALL, waterfallComp);
-        tabs.addTab(TAB_CIRCULAR,  circularComp);
+        tabs.addTab(TAB_CIRCULAR,  circularTab);
         tabs.addTab(TAB_METRICS,   metricsPanel);
 
         // Başlangıç sekmesini ayarla
