@@ -14,3 +14,8 @@ out/
 
 # lib/ klasörü GIT'E EKLENİR (JOGL JAR'ları burada)
 # !lib/
+bin/
+*.log
+.classpath
+.project
+.settings/
