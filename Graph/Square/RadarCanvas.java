@@ -143,10 +143,10 @@ public class RadarCanvas extends GLCanvas implements GLEventListener {
         GL2 gl = drawable.getGL().getGL2();
         gl.glClear(GL.GL_COLOR_BUFFER_BIT);
 
-        // kameranin gorunur araligi -> NDC [-1,1] zoom/pan buradan gelir
+       
         camera.modelMatrix(matrix, 0f, 0f, 2f, 2f);
 
-        // ---- gain grid'ini texture'a yukle ----
+        // gain grid'ini texture'a yukle 
         int i = 0;
         for (int row = 0; row < SCREEN_RESOLUTION; row++) {
             double[] r = image[row];
