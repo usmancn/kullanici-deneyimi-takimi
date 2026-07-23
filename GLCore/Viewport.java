@@ -12,9 +12,7 @@ import com.jogamp.opengl.GL2;
  * bozulmadigi icin ayrica aspect duzeltmesine gerek kalmaz.
  */
 public final class Viewport {
-
-    /** Cizim alaninin piksel olarak ust siniri. */
-    public static final int MAX_SIDE = (int) Camera.WORLD_SIZE;   // 1000
+    public static final int MAX_SIDE = (int) Camera.WORLD_SIZE;   
 
     private volatile int side = MAX_SIDE;
     private volatile int offsetX = 0;
@@ -44,6 +42,16 @@ public final class Viewport {
     /** Verilen pencere boyutu icin kare alanin kenari. */
     public static int side(int width, int height) {
         return Math.max(1, Math.min(Math.min(width, height), MAX_SIDE));
+    }
+
+    /** Kare alanin bilesen uzayindaki sol kenari. */
+    public static int offsetX(int width, int height) {
+        return (width - side(width, height)) / 2;
+    }
+
+    /** Kare alanin bilesen uzayindaki ust kenari (fare olaylari sol-ust orijinli). */
+    public static int offsetY(int width, int height) {
+        return (height - side(width, height)) / 2;
     }
 
     // ---- fare olayi (bilesen uzayi, sol-ust orijin) -> kare alan icindeki konum ----

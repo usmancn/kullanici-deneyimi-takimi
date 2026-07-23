@@ -124,6 +124,8 @@ public class Main {
 
         frame.setVisible(true);
         cards.show(center, CARD_SQUARE); // acilista square
+        cards.show(center, CARD_SQUARE);   // acilista square
+        squareCanvas.requestFocusInWindow();   // TAB (minimap) icin odak canvas'ta olsun
 
         // ---- 6) her sey calissin ----
         squareAnim.start();
@@ -153,6 +155,16 @@ public class Main {
             return Math.max(0, Integer.parseInt(input.trim()));
         } catch (NumberFormatException ex) {
             return DEFAULT_TARGET_COUNT; // gecersiz giris -> varsayilan
+        }
+    }
+
+    // secilen kart gorunur olunca odagi ona ver (TAB ile minimap ac/kapa icin)
+    private static void focusCard(JPanel center) {
+        for (java.awt.Component c : center.getComponents()) {
+            if (c.isVisible()) {
+                c.requestFocusInWindow();
+                return;
+            }
         }
     }
 
@@ -189,6 +201,10 @@ public class Main {
             cards.show(center, CARD_CIRCULAR);
             gainSlider.setVisible(true);
         });
+        square.addActionListener(e    -> { cards.show(center, CARD_SQUARE);    gainSlider.setVisible(true);  focusCard(center); });
+        waterfall.addActionListener(e -> { cards.show(center, CARD_WATERFALL); gainSlider.setVisible(false); focusCard(center); });
+        line.addActionListener(e      -> { cards.show(center, CARD_LINE);      gainSlider.setVisible(true);  focusCard(center); });
+        circular.addActionListener(e  -> { cards.show(center, CARD_CIRCULAR);  gainSlider.setVisible(true);  focusCard(center); });
 
         menu.add(square);
         menu.add(waterfall);

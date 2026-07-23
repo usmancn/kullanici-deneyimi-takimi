@@ -1,6 +1,8 @@
 package deneme.Graph.Square;
 
 import java.awt.Font;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.nio.FloatBuffer;
@@ -17,6 +19,7 @@ import com.jogamp.opengl.util.awt.TextRenderer;
 import deneme.App.GainFilterSlider;
 import deneme.GLCore.Camera;
 import deneme.GLCore.Mark;
+import deneme.GLCore.Minimap;
 import deneme.GLCore.ShaderProgram;
 import deneme.GLCore.Viewport;
 import deneme.MessageProcess.MessageConsumer;
@@ -38,6 +41,8 @@ public class SquareCanvas extends GLCanvas implements GLEventListener {
 
     private final Camera camera = new Camera();
     private final Viewport viewport = new Viewport();
+    private final Minimap minimap = new Minimap();
+    private volatile boolean minimapDragging = false;
 
     // GPU nesneleri
     private int quadVBO;  // ekrani kaplayan tek dortgen (4 vertex: x,y,u,v)
@@ -48,6 +53,7 @@ public class SquareCanvas extends GLCanvas implements GLEventListener {
     private final float[] gainData = new float[CELL_COUNT];   // texture'a yuklenen gain
     private final float[] scanData = new float[4];
     private final float[] matrix = new float[16];
+    private final float[] miniMatrix = new float[16];   // minimap: tum dunya
 
     private int viewWidth = SCREEN_RESOLUTION;
     private int viewHeight = SCREEN_RESOLUTION;
@@ -69,13 +75,37 @@ public class SquareCanvas extends GLCanvas implements GLEventListener {
                         side, side, zoomIn);
         });
         addMouseListener(new MouseAdapter() {
-            @Override public void mousePressed(MouseEvent e)  { camera.panPress(e.getX(), e.getY()); }
-            @Override public void mouseReleased(MouseEvent e) { camera.panRelease(); }
+            @Override public void mousePressed(MouseEvent e) {
+                requestFocusInWindow();          // TAB tuslarini alabilmek icin
+                if (minimap.contains(e.getX(), e.getY(), getWidth(), getHeight())) {
+                    minimapDragging = true;
+                    minimap.navigate(camera, e.getX(), e.getY(), getWidth(), getHeight());
+                    return;
+                }
+                camera.panPress(e.getX(), e.getY());
+            }
+            @Override public void mouseReleased(MouseEvent e) {
+                minimapDragging = false;
+                camera.panRelease();
+            }
         });
         addMouseMotionListener(new MouseAdapter() {
             @Override public void mouseDragged(MouseEvent e) {
+                if (minimapDragging) {           // minimap uzerinde surukleyerek de gezilir
+                    minimap.navigate(camera, e.getX(), e.getY(), getWidth(), getHeight());
+                    return;
+                }
                 int side = Viewport.side(getWidth(), getHeight());
                 camera.panDrag(e.getX(), e.getY(), side, side);
+            }
+        });
+
+        // TAB: minimap ac/kapa (odak gezinme tusu olmaktan cikarilir)
+        setFocusable(true);
+        setFocusTraversalKeysEnabled(false);
+        addKeyListener(new KeyAdapter() {
+            @Override public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_TAB) minimap.toggle();
             }
         });
     }
@@ -201,6 +231,30 @@ public class SquareCanvas extends GLCanvas implements GLEventListener {
 
         // ---- tanimli hedefler: cember + ID (kare konum) ----
         Mark.draw(gl, text, matrix, viewWidth, viewHeight, 22f, m -> new float[] { m.getCenterX(), m.getCenterY() });
+
+        drawMinimap(gl);
+    }
+
+    /** Sol ustte, haritanin 1/4 olcekli aynisi: ayni gain quad'i + scanline, gridsiz. */
+    private void drawMinimap(GL2 gl) {
+        if (!minimap.begin(gl, viewport)) return;
+
+        // kameradan bagimsiz: dunyanin tamami
+        Camera.worldMatrix(miniMatrix, 0f, 0f, 2f, 2f);
+
+        shader.use(gl);
+        shader.setMatrix(gl, miniMatrix);
+        shader.setGainFilter(gl, GainFilterSlider.filterMin(), GainFilterSlider.filterMax());
+        shader.bindVertices(gl, quadVBO);
+        gl.glDrawArrays(GL.GL_TRIANGLE_STRIP, 0, 4);
+
+        shader.useScan(gl);
+        shader.setScanMatrix(gl, miniMatrix);
+        shader.bindScanPosition(gl, scanVBO);
+        gl.glLineWidth(1f);
+        gl.glDrawArrays(GL.GL_LINES, 0, 2);
+
+        minimap.end(gl, viewport, camera);
     }
 
     @Override

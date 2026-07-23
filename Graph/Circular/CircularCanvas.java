@@ -1,6 +1,8 @@
 package deneme.Graph.Circular;
 
 import java.awt.Font;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.nio.FloatBuffer;
@@ -17,6 +19,7 @@ import com.jogamp.opengl.util.awt.TextRenderer;
 import deneme.App.GainFilterSlider;
 import deneme.GLCore.Camera;
 import deneme.GLCore.Mark;
+import deneme.GLCore.Minimap;
 import deneme.GLCore.Viewport;
 import deneme.MessageProcess.MessageConsumer;
 import deneme.MessageProcess.QueueMessage;
@@ -45,6 +48,8 @@ public class CircularCanvas extends GLCanvas implements GLEventListener {
 
     private final Camera camera = new Camera();
     private final Viewport viewport = new Viewport();
+    private final Minimap minimap = new Minimap();
+    private volatile boolean minimapDragging = false;
 
     // GPU nesneleri
     private int quadVBO;   // ekrani kaplayan dortgen (x,y,u,v)
@@ -56,6 +61,7 @@ public class CircularCanvas extends GLCanvas implements GLEventListener {
     private final float[] gainData = new float[CELL_COUNT];
     private final float[] scanData = new float[RING_SEGMENTS * 2];
     private final float[] matrix   = new float[16];
+    private final float[] miniMatrix = new float[16];   // minimap: tum dunya
 
     private int viewWidth = SCREEN_RESOLUTION;
     private int viewHeight = SCREEN_RESOLUTION;
@@ -77,13 +83,37 @@ public class CircularCanvas extends GLCanvas implements GLEventListener {
                         side, side, zoomIn);
         });
         addMouseListener(new MouseAdapter() {
-            @Override public void mousePressed(MouseEvent e)  { camera.panPress(e.getX(), e.getY()); }
-            @Override public void mouseReleased(MouseEvent e) { camera.panRelease(); }
+            @Override public void mousePressed(MouseEvent e) {
+                requestFocusInWindow();          // TAB tuslarini alabilmek icin
+                if (minimap.contains(e.getX(), e.getY(), getWidth(), getHeight())) {
+                    minimapDragging = true;
+                    minimap.navigate(camera, e.getX(), e.getY(), getWidth(), getHeight());
+                    return;
+                }
+                camera.panPress(e.getX(), e.getY());
+            }
+            @Override public void mouseReleased(MouseEvent e) {
+                minimapDragging = false;
+                camera.panRelease();
+            }
         });
         addMouseMotionListener(new MouseAdapter() {
             @Override public void mouseDragged(MouseEvent e) {
+                if (minimapDragging) {           // minimap uzerinde surukleyerek de gezilir
+                    minimap.navigate(camera, e.getX(), e.getY(), getWidth(), getHeight());
+                    return;
+                }
                 int side = Viewport.side(getWidth(), getHeight());
                 camera.panDrag(e.getX(), e.getY(), side, side);
+            }
+        });
+
+        // TAB: minimap ac/kapa (odak gezinme tusu olmaktan cikarilir)
+        setFocusable(true);
+        setFocusTraversalKeysEnabled(false);
+        addKeyListener(new KeyAdapter() {
+            @Override public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_TAB) minimap.toggle();
             }
         });
     }
@@ -227,6 +257,36 @@ public class CircularCanvas extends GLCanvas implements GLEventListener {
             return new float[] { CENTER + rad * (float) Math.sin(bearing),
                                  CENTER + rad * (float) Math.cos(bearing) };
         });
+
+        drawMinimap(gl);
+    }
+
+    /** Sol ustte, haritanin 1/4 olcekli aynisi: ayni polar gorsel + halkalar, gridsiz. */
+    private void drawMinimap(GL2 gl) {
+        if (!minimap.begin(gl, viewport)) return;
+
+        // kameradan bagimsiz: dunyanin tamami
+        Camera.worldMatrix(miniMatrix, 0f, 0f, 2f, 2f);
+
+        shader.use(gl);
+        shader.setMatrix(gl, miniMatrix);
+        shader.setGainFilter(gl, GainFilterSlider.filterMin(), GainFilterSlider.filterMax());
+        shader.bindVertices(gl, quadVBO);
+        gl.glDrawArrays(GL.GL_TRIANGLE_STRIP, 0, 4);
+
+        // scan halkasi + dis cember (scanVBO bu karede zaten guncellendi)
+        shader.useScan(gl);
+        shader.setScanMatrix(gl, miniMatrix);
+        shader.setScanColor(gl, 0.3f, 1.0f, 0.4f);
+        shader.bindScanPosition(gl, scanVBO);
+        gl.glLineWidth(1f);
+        gl.glDrawArrays(GL.GL_LINE_LOOP, 0, RING_SEGMENTS);
+
+        shader.setScanColor(gl, 1.0f, 1.0f, 1.0f);
+        shader.bindScanPosition(gl, rimVBO);
+        gl.glDrawArrays(GL.GL_LINE_LOOP, 0, RING_SEGMENTS);
+
+        minimap.end(gl, viewport, camera);
     }
 
     @Override
