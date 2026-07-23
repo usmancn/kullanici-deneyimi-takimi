@@ -17,6 +17,7 @@ import com.jogamp.opengl.awt.GLCanvas;
 import com.jogamp.opengl.util.awt.TextRenderer;
 
 import deneme.App.GainFilterSlider;
+import deneme.App.MarkMenu;
 import deneme.GLCore.Camera;
 import deneme.GLCore.Mark;
 import deneme.GLCore.Minimap;
@@ -85,6 +86,7 @@ public class CircularCanvas extends GLCanvas implements GLEventListener {
         addMouseListener(new MouseAdapter() {
             @Override public void mousePressed(MouseEvent e) {
                 requestFocusInWindow();          // TAB tuslarini alabilmek icin
+                if (!javax.swing.SwingUtilities.isLeftMouseButton(e)) return;   // sag tik: menu
                 if (minimap.contains(e.getX(), e.getY(), getWidth(), getHeight())) {
                     minimapDragging = true;
                     minimap.navigate(camera, e.getX(), e.getY(), getWidth(), getHeight());
@@ -115,6 +117,36 @@ public class CircularCanvas extends GLCanvas implements GLEventListener {
             @Override public void keyPressed(KeyEvent e) {
                 if (e.getKeyCode() == KeyEvent.VK_TAB) minimap.toggle();
             }
+        });
+    }
+
+    /** Sag tik menusu (mark / change mark / unmark). Main tarafindan baglanir. */
+    public void installMarkMenu(deneme.Simulation.Simulation simulation) {
+        MarkMenu.install(this, simulation, (eventX, eventY) -> {
+            int side = Viewport.side(getWidth(), getHeight());
+            int localX = eventX - Viewport.offsetX(getWidth(), getHeight());
+            int localY = eventY - Viewport.offsetY(getWidth(), getHeight());
+            if (localX < 0 || localY < 0 || localX >= side || localY >= side) return null;
+
+            // ekran -> kare dunya
+            float worldX = camera.screenToWorldX(localX, side);
+            float worldY = camera.screenToWorldY(localY, side);
+
+            // kare dunya -> polar (shader'daki eslesmenin tersi)
+            float dx = worldX - CENTER;
+            float dy = worldY - CENTER;
+            float radius = (float) Math.sqrt(dx * dx + dy * dy) / MAX_RADIUS;
+            if (radius > 1f) return null;                    // cember disi
+
+            double bearing = Math.atan2(dx, dy);             // kuzeyden saat yonunde
+            if (bearing < 0) bearing += 2.0 * Math.PI;
+
+            int column = (int) Math.round(bearing / (2.0 * Math.PI) * SCREEN_RESOLUTION);
+            int row    = Math.round(radius * SCREEN_RESOLUTION);
+            if (column >= SCREEN_RESOLUTION) column -= SCREEN_RESOLUTION;   // 360 -> 0
+            if (row >= SCREEN_RESOLUTION) row = SCREEN_RESOLUTION - 1;
+
+            return new int[] { column, row };
         });
     }
 

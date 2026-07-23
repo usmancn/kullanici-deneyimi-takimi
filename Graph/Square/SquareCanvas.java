@@ -17,6 +17,7 @@ import com.jogamp.opengl.awt.GLCanvas;
 import com.jogamp.opengl.util.awt.TextRenderer;
 
 import deneme.App.GainFilterSlider;
+import deneme.App.MarkMenu;
 import deneme.GLCore.Camera;
 import deneme.GLCore.Mark;
 import deneme.GLCore.Minimap;
@@ -77,6 +78,7 @@ public class SquareCanvas extends GLCanvas implements GLEventListener {
         addMouseListener(new MouseAdapter() {
             @Override public void mousePressed(MouseEvent e) {
                 requestFocusInWindow();          // TAB tuslarini alabilmek icin
+                if (!javax.swing.SwingUtilities.isLeftMouseButton(e)) return;   // sag tik: menu
                 if (minimap.contains(e.getX(), e.getY(), getWidth(), getHeight())) {
                     minimapDragging = true;
                     minimap.navigate(camera, e.getX(), e.getY(), getWidth(), getHeight());
@@ -107,6 +109,22 @@ public class SquareCanvas extends GLCanvas implements GLEventListener {
             @Override public void keyPressed(KeyEvent e) {
                 if (e.getKeyCode() == KeyEvent.VK_TAB) minimap.toggle();
             }
+        });
+    }
+
+    /** Sag tik menusu (mark / change mark / unmark). Main tarafindan baglanir. */
+    public void installMarkMenu(deneme.Simulation.Simulation simulation) {
+        MarkMenu.install(this, simulation, (eventX, eventY) -> {
+            int side = Viewport.side(getWidth(), getHeight());
+            int localX = eventX - Viewport.offsetX(getWidth(), getHeight());
+            int localY = eventY - Viewport.offsetY(getWidth(), getHeight());
+            if (localX < 0 || localY < 0 || localX >= side || localY >= side) return null;
+
+            // kare grafikte dunya dogrudan ekranla ortusur
+            return new int[] {
+                Math.round(camera.screenToWorldX(localX, side)),
+                Math.round(camera.screenToWorldY(localY, side))
+            };
         });
     }
 

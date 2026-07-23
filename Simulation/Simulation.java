@@ -101,12 +101,27 @@ public class Simulation implements TargetIdentifier {
 	 */
 	@Override
 	public String identify(int x, int y) {
+		Target t = targetAt(x, y, 0);
+		if (t == null) return null;
+		return t.isHasID() ? t.getID() : null;
+	}
+
+	/** Sag tik menusu icin fare toleransi (dunya birimi): kucuk hedefler de tutulabilsin. */
+	public static final int PICK_MARGIN = 6;
+
+	/** Verilen noktadaki hedef; yoksa null. */
+	public Target targetAt(int x, int y) {
+		return targetAt(x, y, PICK_MARGIN);
+	}
+
+	private Target targetAt(int x, int y, int margin) {
 		for (Target t : targets) {
 			if (t == null) continue;
 			int w = t.getType().getWidth();
 			int h = t.getType().getHeight();
-			if (Math.abs(x - t.getCenterX()) <= w / 2 && Math.abs(y - t.getTopY()) <= h / 2) {
-				return t.isHasID() ? t.getID() : null;
+			if (Math.abs(x - t.getCenterX()) <= w / 2 + margin
+					&& Math.abs(y - t.getTopY()) <= h / 2 + margin) {
+				return t;
 			}
 		}
 		return null;

@@ -27,6 +27,18 @@ public class Target {
 	public boolean isHasID() {
 		return hasID;
 	}
+	/** Sag tik menusu: hedefe tur atanir (mark / change mark). */
+	public void setType(TargetType type) {
+		this.type = type;
+	}
+	public void setHasID(boolean hasID) {
+		this.hasID = hasID;
+	}
+	/** Unmark: ID silinir, hedef bir daha tanimlanmaz olur. */
+	public void clearID() {
+		this.ID = null;
+		this.hasID = false;
+	}
 	public int getCenterX() {
 		return centerX;
 	}

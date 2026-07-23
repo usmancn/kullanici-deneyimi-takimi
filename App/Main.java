@@ -70,6 +70,9 @@ public class Main {
         // scanline tabanli obje dedektoru: obje bulunca Simulation'a ID sorar
         ObjectDetector detector = new ObjectDetector(detectionQueue, simulation);
 
+        // heavyweight popup: GLCanvas uzerinde hafif popup'lar gorunmez
+        javax.swing.JPopupMenu.setDefaultLightWeightPopupEnabled(false);
+
         // ---- 3) iki OpenGL canvas ----
         GLProfile profile = GLProfile.get(GLProfile.GL2);
         GLCapabilities caps = new GLCapabilities(profile);
@@ -78,6 +81,10 @@ public class Main {
         WaterfallCanvas waterfallCanvas = new WaterfallCanvas(caps, waterfallQueue);
         LineCanvas lineCanvas = new LineCanvas(caps, lineQueue);
         CircularCanvas circularCanvas = new CircularCanvas(caps, circularQueue);
+
+        // sag tik menusu: mark / change mark / unmark
+        squareCanvas.installMarkMenu(simulation);
+        circularCanvas.installMarkMenu(simulation);
 
         // ---- 4) CardLayout ile ikisini ust uste koy, menuden sec ----
         CardLayout cards = new CardLayout();

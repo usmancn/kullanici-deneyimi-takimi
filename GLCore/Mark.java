@@ -56,6 +56,12 @@ public final class Mark {
         MARKS.put(id, new Mark(centerX, centerY, id, gain));
     }
 
+    /** Unmark / tur degistirme: verilen ID'nin isareti kaldirilir. */
+    public static void remove(String id) {
+        if (id == null) return;
+        MARKS.remove(id);
+    }
+
     public static Collection<Mark> all() {
         return MARKS.values();
     }
