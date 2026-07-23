@@ -10,25 +10,27 @@ import com.jogamp.opengl.util.awt.TextRenderer;
  * Kutupsal (PPI) grafik icin grid: ic ice halkalar + aci cizgileri + etiketler,
  * hepsi tek sinifta.
  *
- * <p>Halkalar menzilin 1/4, 2/4, 3/4 ve tamamini; radyal cizgiler 30 derecelik
+ * <p>
+ * Halkalar menzilin 1/4, 2/4, 3/4 ve tamamini; radyal cizgiler 30 derecelik
  * araliklari gosterir. Aci etiketleri dis cemberin biraz disinda durur, zoom
  * yapilinca ekran kenarina yapisip gorunur kalir.
  *
- * <p>Cizim {@code Mark} ile ayni sabit-fonksiyon (immediate mode) yolunu kullanir.
+ * <p>
+ * Cizim {@code Mark} ile ayni sabit-fonksiyon (immediate mode) yolunu kullanir.
  */
 public final class GridLayer {
 
     private static final int SCREEN_RESOLUTION = 1000;
-    private static final float CENTER = SCREEN_RESOLUTION / 2f;        // 500
-    private static final float MAX_RADIUS = SCREEN_RESOLUTION * 0.5f;  // 500 -> ic teget cember
+    private static final float CENTER = SCREEN_RESOLUTION / 2f; // 500
+    private static final float MAX_RADIUS = SCREEN_RESOLUTION * 0.5f; // 500 -> ic teget cember
 
     private static final int RING_SEGMENTS = 128;
-    private static final int RADIAL_LINES = 12;                        // 30 derecede bir
-    private static final float RING_STEP = 0.25f;                      // 4 halka
+    private static final int RADIAL_LINES = 12; // 30 derecede bir
+    private static final float RING_STEP = 0.25f; // 4 halka
 
     private static final int FONT_SIZE = 12;
     private static final int PADDING = 6;
-    private static final int EDGE_PADDING = 18;                        // etiketin ekran kenarina mesafesi
+    private static final int EDGE_PADDING = 18; // etiketin ekran kenarina mesafesi
 
     // soluk gri-beyaz: gain gorseli uzerinde okunur ama bastirmaz
     private static final float LINE_GRAY = 0.65f;
@@ -40,11 +42,13 @@ public final class GridLayer {
     }
 
     /**
-     * @param matrix veriyle ayni kamera matrisi (aspect duzeltmesi uygulanmis)
+     * @param matrix       veriyle ayni kamera matrisi (aspect duzeltmesi
+     *                     uygulanmis)
      * @param width/height drawable piksel boyutu
      */
     public void draw(GL2 gl, float[] matrix, int width, int height) {
-        if (width <= 0 || height <= 0) return;
+        if (width <= 0 || height <= 0)
+            return;
 
         // ---- halkalar + radyal cizgiler: dunya uzayi, veriyle ayni matris ----
         gl.glUseProgram(0);
@@ -69,7 +73,7 @@ public final class GridLayer {
             for (int k = 0; k < RING_SEGMENTS; k++) {
                 double theta = 2.0 * Math.PI * k / RING_SEGMENTS;
                 gl.glVertex2f(CENTER + radius * (float) Math.cos(theta),
-                              CENTER + radius * (float) Math.sin(theta));
+                        CENTER + radius * (float) Math.sin(theta));
             }
             gl.glEnd();
         }
@@ -80,7 +84,7 @@ public final class GridLayer {
             double bearing = bearing(i);
             gl.glVertex2f(CENTER, CENTER);
             gl.glVertex2f(CENTER + MAX_RADIUS * (float) Math.sin(bearing),
-                          CENTER + MAX_RADIUS * (float) Math.cos(bearing));
+                    CENTER + MAX_RADIUS * (float) Math.cos(bearing));
         }
         gl.glEnd();
 
@@ -91,7 +95,8 @@ public final class GridLayer {
         float centerPixelX = pixelX(matrix, CENTER, CENTER, width);
         float centerPixelY = pixelY(matrix, CENTER, CENTER, height);
 
-        // --- aci etiketleri (0..330, 30 derecede bir; 0 kuzeyde, saat yonunde artar) ---
+        // --- aci etiketleri (0..330, 30 derecede bir; 0 kuzeyde, saat yonunde artar)
+        // ---
         for (int i = 0; i < RADIAL_LINES; i++) {
             double bearing = bearing(i);
             // istenen konum: dis cemberin biraz disi
@@ -105,25 +110,29 @@ public final class GridLayer {
             float dirX = targetPixelX - centerPixelX;
             float dirY = targetPixelY - centerPixelY;
             float length = (float) Math.sqrt(dirX * dirX + dirY * dirY);
-            if (length < 1e-4f) continue;
-            dirX /= length; dirY /= length;
+            if (length < 1e-4f)
+                continue;
+            dirX /= length;
+            dirY /= length;
 
             // zoom'da etiket ekran disina cikmasin: isini padding'li dikdortgene kirp
             float limit = rayLimit(centerPixelX, centerPixelY, dirX, dirY, width, height);
             float finalLength = Math.min(length, limit);
-            if (finalLength < 0f) finalLength = 0f;
+            if (finalLength < 0f)
+                finalLength = 0f;
 
             int pixelX = Math.round(centerPixelX + dirX * finalLength);
             int pixelY = Math.round(centerPixelY + dirY * finalLength);
 
             String label = (i * (360 / RADIAL_LINES)) + "°";
-            int textWidth  = Math.round((float) text.getBounds(label).getWidth());
+            int textWidth = Math.round((float) text.getBounds(label).getWidth());
             int textHeight = Math.round((float) text.getBounds(label).getHeight());
             text.draw(label, pixelX - textWidth / 2, pixelY - textHeight / 2);
         }
 
         // --- menzil etiketleri (4 halka: 250, 500, 750, 1000) ---
-        // halkanin fiziksel yeri MAX_RADIUS*r, ustune yazilan menzil r * SCREEN_RESOLUTION;
+        // halkanin fiziksel yeri MAX_RADIUS*r, ustune yazilan menzil r *
+        // SCREEN_RESOLUTION;
         // boylece kare grafikle ayni 0..1000 olcegi gorunur
         for (float r = RING_STEP; r <= 1.0f + 1e-4f; r += RING_STEP) {
             float worldX = CENTER + MAX_RADIUS * r;
@@ -140,8 +149,10 @@ public final class GridLayer {
     }
 
     /**
-     * i. radyal cizginin aci degeri (radyan): kuzeyden (yukari) saat yonunde olculur.
-     * Shader'daki {@code a = atan(c.x, c.y) / 2pi} eslesmesinin tersidir; dunya yonu
+     * i. radyal cizginin aci degeri (radyan): kuzeyden (yukari) saat yonunde
+     * olculur.
+     * Shader'daki {@code a = atan(c.x, c.y) / 2pi} eslesmesinin tersidir; dunya
+     * yonu
      * {@code (sin(bearing), cos(bearing))} ile bulunur.
      */
     private static double bearing(int index) {
@@ -153,15 +164,19 @@ public final class GridLayer {
      * terk ettigi mesafe (piksel).
      */
     private static float rayLimit(float originX, float originY, float dirX, float dirY,
-                                  int width, int height) {
+            int width, int height) {
         float minX = EDGE_PADDING, maxX = width - EDGE_PADDING;
         float minY = EDGE_PADDING, maxY = height - EDGE_PADDING;
 
         float limit = Float.MAX_VALUE;
-        if (dirX > 1e-4f)       limit = Math.min(limit, (maxX - originX) / dirX);
-        else if (dirX < -1e-4f) limit = Math.min(limit, (minX - originX) / dirX);
-        if (dirY > 1e-4f)       limit = Math.min(limit, (maxY - originY) / dirY);
-        else if (dirY < -1e-4f) limit = Math.min(limit, (minY - originY) / dirY);
+        if (dirX > 1e-4f)
+            limit = Math.min(limit, (maxX - originX) / dirX);
+        else if (dirX < -1e-4f)
+            limit = Math.min(limit, (minX - originX) / dirX);
+        if (dirY > 1e-4f)
+            limit = Math.min(limit, (maxY - originY) / dirY);
+        else if (dirY < -1e-4f)
+            limit = Math.min(limit, (minY - originY) / dirY);
         return limit;
     }
 
