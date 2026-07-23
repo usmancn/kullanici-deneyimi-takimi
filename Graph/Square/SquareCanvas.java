@@ -267,7 +267,6 @@ public class SquareCanvas extends GLCanvas implements GLEventListener {
         shader.setGainFilter(gl, GainFilterSlider.filterMin(), GainFilterSlider.filterMax());
         shader.bindVertices(gl, quadVBO);
         gl.glDrawArrays(GL.GL_TRIANGLE_STRIP, 0, 4);
-
         shader.useScan(gl);
         shader.setScanMatrix(gl, miniMatrix);
         shader.bindScanPosition(gl, scanVBO);

@@ -51,47 +51,124 @@ public class Simulation implements TargetIdentifier {
 		QueueMessage message = new QueueMessage(currentRowIndex, row);
         send(message);
         currentRowIndex = (currentRowIndex + 1) % SCREEN_RESOLUTION;
+        if(currentRowIndex == 0) {
+        	replaceTargets();
+        }
 	}
 	public void send(QueueMessage message) {
 		publisher.publish(message);
 	}
-	public void placeTarget(int targetCount) {
-		this.targets = new Target[targetCount];
+	
+	/** Bir hedefe yeni yer ararken denenecek en fazla rastgele konum (sonsuz donguyu onler). */
+	private static final int MAX_PLACE_ATTEMPTS = 30;
+
+	/** Iki hedef merkezi arasindaki en kucuk mesafe. */
+	private static final int MIN_TARGET_DISTANCE = 20;
+
+	/**
+	 * Her tam tarama sonunda (currentRowIndex == 0) hedefleri 0.9 - 1.1 kati
+	 * araliginda yeni konuma tasir. Konumlar dunya sinirlari icinde kalir ve
+	 * hedefler ust uste binmez.
+	 *
+	 * <p>Sonunda veri gridi <b>bastan uretilir</b> (yeni satir dizileri). Canvas'lar
+	 * satir dizilerine referans tuttugu icin bu sart: eski satirlar, scanline o
+	 * satira tekrar gelene kadar ekranda eski konumlariyla kalir.
+	 */
+	public void replaceTargets() {
 		Random random = new Random();
-		
 		for(int i = 0; i < targetCount; i++) {
-			
-			int x = random.nextInt(SCREEN_RESOLUTION - 20);
-			int y = random.nextInt(SCREEN_RESOLUTION - 20);
-			
-			if(x < 20) {x = 20;}
-			if(y < 20) {y = 20;}
-			
-			boolean constraint = false;
-			
-			for(int j = 0; j < i; j++) {
-				if(Math.abs(x - this.targets[j].getCenterX()) < 20 && Math.abs(y - this.targets[j].getTopY()) < 20)
-					constraint = true;
-			}
-			if(constraint) {
-				i--;
-			}
-			else {
-				Target target = new Target();
+			Target target = targets[i];
+			if(target == null) continue;
+
+			for(int attempt = 0; attempt < MAX_PLACE_ATTEMPTS; attempt++) {
+				int x = (int)((0.9 + 0.2 * random.nextDouble()) * target.getCenterX());
+				int y = (int)((0.9 + 0.2 * random.nextDouble()) * target.getTopY());
+
+				x = clampToWorld(x, target.getType().getWidth());
+				y = clampToWorld(y, target.getType().getHeight());
+
+				if(collides(i, x, y)) continue;
+
 				target.setCenterX(x);
 				target.setTopY(y);
-				this.targets[i] = target;
-				// hedefi thread-safe mark tablosuna kaydet (hasID + ID)
-				for(int k = x - target.getType().getWidth() / 2; k < x + target.getType().getWidth() / 2; k++) {
-					for(int t = y - target.getType().getHeight() / 2; t < y + target.getType().getHeight() / 2; t++) {
-						if(t >= 0 && k>= 0 && t < SCREEN_RESOLUTION && k < SCREEN_RESOLUTION) {
-							this.data[t][k] = target.getGainFactor();
-						}
-					}
+				break;   // yer bulunamazsa hedef eski konumunda kalir
+			}
+		}
+		this.data = buildData();
+	}
+
+	/** i. hedef disindaki bir hedefle cakisiyor mu. */
+	private boolean collides(int index, int x, int y) {
+		for(int j = 0; j < targets.length; j++) {
+			if(j == index || targets[j] == null) continue;
+			if(Math.abs(x - targets[j].getCenterX()) < MIN_TARGET_DISTANCE
+					&& Math.abs(y - targets[j].getTopY()) < MIN_TARGET_DISTANCE) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** Hedef merkezini, kapladigi alan dunya disina tasmayacak sekilde sinirlar. */
+	private int clampToWorld(int value, int size) {
+		int half = size / 2;
+		if(value < half) return half;
+		if(value > SCREEN_RESOLUTION - 1 - half) return SCREEN_RESOLUTION - 1 - half;
+		return value;
+	}
+
+	/** Gurultu zemini + tum hedeflerin basildigi yeni bir veri gridi uretir. */
+	private double[][] buildData() {
+		double[][] grid = new double[SCREEN_RESOLUTION][SCREEN_RESOLUTION];
+		Random random = new Random();
+		for(int i = 0; i < SCREEN_RESOLUTION; i++) {
+			for(int j = 0; j < SCREEN_RESOLUTION; j++) {
+				grid[i][j] = 0.2 * random.nextDouble();
+			}
+		}
+		for(Target target : targets) {
+			if(target == null) continue;
+			stamp(grid, target);
+		}
+		return grid;
+	}
+
+	/** Hedefin dikdortgenini grid'e gain factor'u ile basar. */
+	private void stamp(double[][] grid, Target target) {
+		int x = target.getCenterX();
+		int y = target.getTopY();
+		int width = target.getType().getWidth();
+		int height = target.getType().getHeight();
+
+		for(int k = x - width / 2; k < x + width / 2; k++) {
+			for(int t = y - height / 2; t < y + height / 2; t++) {
+				if(t >= 0 && k >= 0 && t < SCREEN_RESOLUTION && k < SCREEN_RESOLUTION) {
+					grid[t][k] = target.getGainFactor();
 				}
 			}
 		}
-		
+	}
+	public void placeTarget(int targetCount) {
+		this.targetCount = targetCount;
+		this.targets = new Target[targetCount];
+		Random random = new Random();
+
+		for(int i = 0; i < targetCount; i++) {
+			Target target = new Target();
+
+			for(int attempt = 0; attempt < MAX_PLACE_ATTEMPTS; attempt++) {
+				int x = clampToWorld(random.nextInt(SCREEN_RESOLUTION), target.getType().getWidth());
+				int y = clampToWorld(random.nextInt(SCREEN_RESOLUTION), target.getType().getHeight());
+
+				// yer bulunamazsa son denenen konum kullanilir (ilk yerlesimde eski konum yok)
+				target.setCenterX(x);
+				target.setTopY(y);
+				if(!collides(i, x, y)) break;
+			}
+			this.targets[i] = target;
+		}
+
+		this.data = buildData();
 	}
 	
 	/**
@@ -103,7 +180,7 @@ public class Simulation implements TargetIdentifier {
 	public String identify(int x, int y) {
 		Target t = targetAt(x, y, 0);
 		if (t == null) return null;
-		return t.isHasID() ? t.getID() : null;
+		return t.getID();
 	}
 
 	/** Sag tik menusu icin fare toleransi (dunya birimi): kucuk hedefler de tutulabilsin. */

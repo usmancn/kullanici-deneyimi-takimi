@@ -3,20 +3,8 @@ package deneme.GLCore;
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
 
-/**
- * Sol ustte duran, haritanin 1/4 olcekli aynisi.
- *
- * <p>Ayri bir GL viewport'unda cizilir; canvas kendi harita cizimini
- * {@link #begin} ile {@link #end} arasinda, kameradan bagimsiz
- * {@link Camera#worldMatrix} ile tekrarlar. Boylece minimap her zaman dunyanin
- * tamamini gosterir ve grid/isaret gibi katmanlar disarida birakilir.
- *
- * <p>TAB ile acilip kapanir. Uzerine tiklaninca ana gorunum o noktaya gider.
- * Zeminden ayrilmasi icin alt ve sag kenarina yumusak bir karartma cizilir.
- */
 public final class Minimap {
 
-    /** Minimap kenari, kare cizim alaninin bu orani kadardir. */
     public static final float FRACTION = 0.25f;
 
     /** Karartma bandinin kalinligi (minimap kenarinin orani). */
@@ -40,12 +28,6 @@ public final class Minimap {
         visible = !visible;
     }
 
-    /**
-     * Minimap viewport'unu acar ve zeminini canvas'in kendi arka plan rengiyle
-     * temizler (altta kalan ana gorunum silinir).
-     *
-     * @return false ise minimap kapali; cizim yapilmamali, {@link #end} cagrilmamali
-     */
     public boolean begin(GL2 gl, Viewport viewport) {
         if (!visible) return false;
 
@@ -98,13 +80,13 @@ public final class Minimap {
         gl.glEnd();
         gl.glLineWidth(1f);
 
-        // ---- alt ve sag kenar karartmasi: NDC'de, disa dogru koyulasan bant ----
+        // ---- alt ve sag kenar karartmasi: disa dogru koyulasan bant ----
         gl.glMatrixMode(GL2.GL_PROJECTION);
         gl.glLoadIdentity();
         gl.glEnable(GL.GL_BLEND);
         gl.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA);
 
-        float band = 2f * SHADOW_FRACTION;   // NDC araligi -1..1 oldugu icin 2 kat
+        float band = 2f * SHADOW_FRACTION;   
 
         gl.glBegin(GL2.GL_QUADS);
         // sag kenar: icerisi saydam -> kenar koyu

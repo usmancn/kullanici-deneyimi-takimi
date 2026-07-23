@@ -33,15 +33,9 @@ public class ShaderProgram {
 	        "        return;\n" +
 	        "    }\n" +
 	        "    vec3 color;\n" +
-	        "    if (gain < 0.2) {\n" +
-	        "        float t = gain / 0.2;\n" +
-	        "        color = mix(darkGreen, lightGreen, t);\n" +
-	        "    } else if (gain >= 0.6) {\n" +
-	        "        float t = (gain - 0.6) / 0.4;\n" +
-	        "        color = mix(lightRed, darkRed, t);\n" +
-	        "    } else {\n" +
-	        "        color = vec3(0.0, 0.0, 0.0);\n" +
-	        "    }\n" +
+	        "    \n" +
+	        "        color = mix(darkGreen, lightGreen, gain);\n" +
+	        "    \n" +
 	        "    gl_FragColor = vec4(color, 1.0);\n" +
 	        "}\n";
 
@@ -135,8 +129,8 @@ public class ShaderProgram {
 
         gl.glUseProgram(program);
         gl.glUniform1i(uniformGainTex, 0);   // gainTex -> texture unit 0
-        setDarkGreen(gl,  0.0f, 0.30f, 0.0f);
-        setLightGreen(gl, 0.0f, 0.45f, 0.0f);
+        setDarkGreen(gl,  0.0f, 0.0f, 0.0f);
+        setLightGreen(gl, 0.0f, 1f, 0.0f);
         setLightRed(gl, 0.6f, 0.0f, 0.0f);
         setDarkRed(gl,  0.4f, 0.0f, 0.0f);
         setGainFilter(gl, 0.0f, 1.0f);   // baslangicta hepsi gorunur

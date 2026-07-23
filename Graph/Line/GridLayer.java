@@ -12,7 +12,8 @@ import com.jogamp.opengl.util.awt.TextRenderer;
  * <p>Yatay cizgiler her 0.05 gain'de, dikey cizgiler her 50 x biriminde durur.
  * Dunya olcegi gain*1000 oldugu icin iki eksende de adim 50 dunya birimidir.
  * Cizgiler dunya uzayinda sabittir (veriyle birlikte zoom/pan olur, kayan bir
- * sey yok) ve soluk gri cizilir; beyaz zeminde okunur ama veriyi bastirmaz.
+ * sey yok) ve soluk gri cizilir; siyah zeminde ve altindaki waterfall katmani
+ * uzerinde okunur ama veriyi bastirmaz.
  *
  * <p>Etiketler kalabalik olmasin diye seyrektir: Y'de her 0.1 gain, X'te her 100
  * birim.
@@ -28,9 +29,9 @@ public final class GridLayer {
     private static final int FONT_SIZE = 12;
     private static final int PADDING = 4;
 
-    // beyaz zeminde soluk gri cizgi / biraz daha koyu etiket
-    private static final float LINE_GRAY = 0.85f;
-    private static final float TEXT_GRAY = 0.45f;
+    // siyah zemin + altta waterfall: cizgi soluk gri, etiket okunur olsun diye acik
+    private static final float LINE_GRAY = 0.40f;
+    private static final float TEXT_GRAY = 0.80f;
 
     private TextRenderer text;
 

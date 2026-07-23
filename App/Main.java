@@ -3,6 +3,7 @@ package deneme.App;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Dimension;
+import java.awt.GridLayout;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.concurrent.BlockingQueue;
@@ -36,7 +37,6 @@ public class Main {
     private static final int DEFAULT_TARGET_COUNT = 15;
 
     private static final String CARD_SQUARE = "square";
-    private static final String CARD_WATERFALL = "waterfall";
     private static final String CARD_LINE = "line";
     private static final String CARD_CIRCULAR = "circular";
 
@@ -86,13 +86,18 @@ public class Main {
         squareCanvas.installMarkMenu(simulation);
         circularCanvas.installMarkMenu(simulation);
 
+        // line + waterfall tek kartta, alt alta: her biri 1000x500 yarida durur,
+        // Viewport kisa kenara gore kare aldigi icin ikisi de 500x500 cizer
+        JPanel lineWaterfall = new JPanel(new GridLayout(2, 1));
+        lineWaterfall.add(lineCanvas);        // ustte line
+        lineWaterfall.add(waterfallCanvas);   // altta waterfall
+
         // ---- 4) CardLayout ile ikisini ust uste koy, menuden sec ----
         CardLayout cards = new CardLayout();
         JPanel center = new JPanel(cards);
         center.setPreferredSize(new Dimension(1000, 1000));
         center.add(squareCanvas, CARD_SQUARE);
-        center.add(waterfallCanvas, CARD_WATERFALL);
-        center.add(lineCanvas, CARD_LINE);
+        center.add(lineWaterfall, CARD_LINE);
         center.add(circularCanvas, CARD_CIRCULAR);
 
         GainFilterSlider gainSlider = new GainFilterSlider();
@@ -181,40 +186,19 @@ public class Main {
         JMenu menu = new JMenu("Grafik");
 
         JRadioButtonMenuItem square = new JRadioButtonMenuItem("Square", true);
-        JRadioButtonMenuItem waterfall = new JRadioButtonMenuItem("Waterfall");
-        JRadioButtonMenuItem line = new JRadioButtonMenuItem("Line");
+        JRadioButtonMenuItem line = new JRadioButtonMenuItem("Line + Waterfall");
         JRadioButtonMenuItem circular = new JRadioButtonMenuItem("Circular");
 
         ButtonGroup group = new ButtonGroup();
         group.add(square);
-        group.add(waterfall);
         group.add(line);
         group.add(circular);
 
-        // gain filtresi waterfall disindaki grafiklerde gorunur
-        square.addActionListener(e -> {
-            cards.show(center, CARD_SQUARE);
-            gainSlider.setVisible(true);
-        });
-        waterfall.addActionListener(e -> {
-            cards.show(center, CARD_WATERFALL);
-            gainSlider.setVisible(false);
-        });
-        line.addActionListener(e -> {
-            cards.show(center, CARD_LINE);
-            gainSlider.setVisible(true);
-        });
-        circular.addActionListener(e -> {
-            cards.show(center, CARD_CIRCULAR);
-            gainSlider.setVisible(true);
-        });
-        square.addActionListener(e    -> { cards.show(center, CARD_SQUARE);    gainSlider.setVisible(true);  focusCard(center); });
-        waterfall.addActionListener(e -> { cards.show(center, CARD_WATERFALL); gainSlider.setVisible(false); focusCard(center); });
-        line.addActionListener(e      -> { cards.show(center, CARD_LINE);      gainSlider.setVisible(true);  focusCard(center); });
-        circular.addActionListener(e  -> { cards.show(center, CARD_CIRCULAR);  gainSlider.setVisible(true);  focusCard(center); });
+        square.addActionListener(e    -> { cards.show(center, CARD_SQUARE);   gainSlider.setVisible(true); focusCard(center); });
+        line.addActionListener(e      -> { cards.show(center, CARD_LINE);     gainSlider.setVisible(true); focusCard(center); });
+        circular.addActionListener(e  -> { cards.show(center, CARD_CIRCULAR); gainSlider.setVisible(true); focusCard(center); });
 
         menu.add(square);
-        menu.add(waterfall);
         menu.add(line);
         menu.add(circular);
         bar.add(menu);

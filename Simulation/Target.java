@@ -4,7 +4,6 @@ public class Target {
 	private TargetType type;
 	private String ID;
 	private static int idCounter = 0;
-	private boolean hasID;
 	private int centerX;
 	private int topY;
 	private double gainFactor;
@@ -15,29 +14,14 @@ public class Target {
 		return ID;
 	}
 	public void setID() {
-		ID = type.getTypeName() + Integer.toString(idCounter);
-		setIdCounter();
+		ID = Integer.toString(idCounter);
+		idCounter++;
 	}
 	public static int getIdCounter() {
 		return idCounter;
 	}
-	private void setIdCounter() {
-		idCounter++;
-	}
-	public boolean isHasID() {
-		return hasID;
-	}
-	/** Sag tik menusu: hedefe tur atanir (mark / change mark). */
 	public void setType(TargetType type) {
 		this.type = type;
-	}
-	public void setHasID(boolean hasID) {
-		this.hasID = hasID;
-	}
-	/** Unmark: ID silinir, hedef bir daha tanimlanmaz olur. */
-	public void clearID() {
-		this.ID = null;
-		this.hasID = false;
 	}
 	public int getCenterX() {
 		return centerX;
@@ -57,9 +41,7 @@ public class Target {
 	public Target() {
 		this.type = selectTargetType();
 		initGainFactor();
-		couldHaveID();
-		if(this.hasID)
-			setID();
+		setID();
 	}
 	public TargetType selectTargetType() {
 		Random random = new Random();
@@ -80,12 +62,4 @@ public class Target {
 		Random random = new Random();
 		this.gainFactor = 0.4 * random.nextDouble() + 0.6;
 	}
-	
-	public void couldHaveID() {
-		Random random = new Random();
-		this.hasID = random.nextBoolean();
-	}
-
-	
-
 }

@@ -147,7 +147,7 @@ public class LineCanvas extends GLCanvas implements GLEventListener {
 	@Override
 	public void init(GLAutoDrawable drawable) {
 		GL2 gl = drawable.getGL().getGL2();
-        gl.glClearColor(1f, 1f, 1f, 1f);
+        gl.glClearColor(0f, 0f, 0f, 1f);   // altta waterfall var: zemin siyah
 
         // soluk ortalama cizgisi (alpha 0.3) icin blend acik olmali
         gl.glEnable(GL.GL_BLEND);
@@ -160,14 +160,13 @@ public class LineCanvas extends GLCanvas implements GLEventListener {
         gl.glGenBuffers(2, ids, 0);
         lineVBO = ids[0];
         averageVBO = ids[1];
-        
+
         gl.glBindBuffer(GL.GL_ARRAY_BUFFER, lineVBO);
         gl.glBufferData(GL.GL_ARRAY_BUFFER, (long) lineData.length * Float.BYTES,
                 null, GL.GL_DYNAMIC_DRAW);
         gl.glBindBuffer(GL.GL_ARRAY_BUFFER, averageVBO);
         gl.glBufferData(GL.GL_ARRAY_BUFFER, (long) averageData.length * Float.BYTES,
                 null, GL.GL_DYNAMIC_DRAW);
-		
 	}
 	
 	@Override

@@ -29,8 +29,6 @@ public class ShaderProgram {
             "uniform sampler2D gainTex;\n" +
             "uniform vec3 darkGreen;\n" +
             "uniform vec3 lightGreen;\n" +
-            "uniform vec3 darkRed;\n" +
-            "uniform vec3 lightRed;\n" +
             "uniform vec3 background;\n" +
             "uniform float filterMin;\n" +
             "uniform float filterMax;\n" +
@@ -50,16 +48,7 @@ public class ShaderProgram {
             "        gl_FragColor = vec4(background, 1.0);\n" + // aralik disi -> gizle
             "        return;\n" +
             "    }\n" +
-            "    vec3 color;\n" +
-            "    if (gain < 0.2) {\n" +
-            "        float t = gain / 0.2;\n" +
-            "        color = mix(darkGreen, lightGreen, t);\n" +
-            "    } else if (gain >= 0.6) {\n" +
-            "        float t = (gain - 0.6) / 0.4;\n" +
-            "        color = mix(lightRed, darkRed, t);\n" +
-            "    } else {\n" +
-            "        color = vec3(0.0, 0.0, 0.0);\n" +
-            "    }\n" +
+            "    vec3 color = mix(darkGreen, lightGreen, clamp(gain, 0.0, 1.0));\n" +
             "    gl_FragColor = vec4(color, 1.0);\n" +
             "}\n";
 
@@ -88,8 +77,6 @@ public class ShaderProgram {
     private int uniformGainTex;
     private int uniformDarkGreen;
     private int uniformLightGreen;
-    private int uniformDarkRed;
-    private int uniformLightRed;
     private int uniformBackground;
     private int uniformFilterMin;
     private int uniformFilterMax;
@@ -126,8 +113,6 @@ public class ShaderProgram {
         uniformGainTex    = gl.glGetUniformLocation(program, "gainTex");
         uniformDarkGreen  = gl.glGetUniformLocation(program, "darkGreen");
         uniformLightGreen = gl.glGetUniformLocation(program, "lightGreen");
-        uniformDarkRed    = gl.glGetUniformLocation(program, "darkRed");
-        uniformLightRed   = gl.glGetUniformLocation(program, "lightRed");
         uniformBackground = gl.glGetUniformLocation(program, "background");
         uniformFilterMin  = gl.glGetUniformLocation(program, "filterMin");
         uniformFilterMax  = gl.glGetUniformLocation(program, "filterMax");
@@ -155,10 +140,8 @@ public class ShaderProgram {
 
         gl.glUseProgram(program);
         gl.glUniform1i(uniformGainTex, 0);   // gainTex -> texture unit 0
-        setDarkGreen(gl,  0.0f, 0.30f, 0.0f);
-        setLightGreen(gl, 0.0f, 0.45f, 0.0f);
-        setLightRed(gl, 0.6f, 0.0f, 0.0f);
-        setDarkRed(gl,  0.4f, 0.0f, 0.0f);
+        setDarkGreen(gl,  0.0f, 0.0f, 0.0f);
+        setLightGreen(gl, 0.0f, 1f, 0.0f);
         setBackground(gl, 0.0f, 0.0f, 0.0f);    // cember disi (ve filtrelenen) alan siyah
         setGainFilter(gl, 0.0f, 1.0f);          // baslangicta hepsi gorunur
 
@@ -185,8 +168,6 @@ public class ShaderProgram {
     public void setMatrix(GL2 gl, float[] matrix)     { gl.glUniformMatrix4fv(uniformMatrix, 1, false, matrix, 0); }
     public void setDarkGreen(GL2 gl, float r, float g, float b)  { gl.glUniform3f(uniformDarkGreen, r, g, b); }
     public void setLightGreen(GL2 gl, float r, float g, float b) { gl.glUniform3f(uniformLightGreen, r, g, b); }
-    public void setDarkRed(GL2 gl, float r, float g, float b)    { gl.glUniform3f(uniformDarkRed, r, g, b); }
-    public void setLightRed(GL2 gl, float r, float g, float b)   { gl.glUniform3f(uniformLightRed, r, g, b); }
     public void setBackground(GL2 gl, float r, float g, float b) { gl.glUniform3f(uniformBackground, r, g, b); }
 
     /** Gain filtre araligi; [min,max] disindaki gain'ler gizlenir. */

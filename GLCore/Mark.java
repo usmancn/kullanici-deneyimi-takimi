@@ -36,7 +36,8 @@ public final class Mark {
     private final int centerX;
     private final int centerY;
     private final String id;
-    private final float gain;   // hedefin gain degeri: gain filtresiyle karsilastirilir
+    private final float gain;      // hedefin gain degeri: gain filtresiyle karsilastirilir
+    private volatile boolean marked;   // sari cember cizilsin mi (sag tik menusu belirler)
 
     private Mark(int centerX, int centerY, String id, float gain) {
         this.centerX = centerX;
@@ -49,14 +50,48 @@ public final class Mark {
     public int getCenterY() { return centerY; }
     public String getId()   { return id; }
     public float getGain()  { return gain; }
+    public boolean isMarked() { return marked; }
 
-    /** Tanimli (ID'li) bir hedefi mark olarak kaydeder/gunceller. ID null ise yok sayar. */
+    /**
+     * Dedektorun tespit ettigi hedefi kaydeder/gunceller. ID null ise yok sayar.
+     *
+     * <p>Hedefler <b>unmarked</b> baslar: kayit sadece ID etiketinin cizilmesini
+     * saglar, sari cember icin kullanicinin sag tik menusunden isaretlemesi
+     * gerekir. Her taramada tekrar cagrildigi icin mevcut isaret durumu korunur.
+     */
     public static void register(int centerX, int centerY, String id, float gain) {
         if (id == null) return;
-        MARKS.put(id, new Mark(centerX, centerY, id, gain));
+        MARKS.compute(id, (key, previous) -> {
+            Mark created = new Mark(centerX, centerY, key, gain);
+            created.marked = (previous != null) && previous.marked;
+            return created;
+        });
     }
 
-    /** Unmark / tur degistirme: verilen ID'nin isareti kaldirilir. */
+    /** Verilen ID isaretli mi (sari cemberi var mi). */
+    public static boolean isMarked(String id) {
+        if (id == null) return false;
+        Mark mark = MARKS.get(id);
+        return mark != null && mark.marked;
+    }
+
+    /** Sag tik menusu - Mark: cember cizilmeye baslar. */
+    public static void mark(String id) {
+        setMarked(id, true);
+    }
+
+    /** Sag tik menusu - Unmark: cember kalkar, ID etiketi kalir. */
+    public static void unmark(String id) {
+        setMarked(id, false);
+    }
+
+    private static void setMarked(String id, boolean value) {
+        if (id == null) return;
+        Mark mark = MARKS.get(id);
+        if (mark != null) mark.marked = value;
+    }
+
+    /** Kaydi tamamen siler (ID etiketi de kaybolur). */
     public static void remove(String id) {
         if (id == null) return;
         MARKS.remove(id);
@@ -71,8 +106,9 @@ public final class Mark {
     }
 
     /**
-     * Tum marklarin etrafina cember (dunya-uzayi, zoom ile olceklenir) cizer,
-     * ustune ID yazar (ekran-uzayi, sabit boyut - kararli, buyume yok).
+     * Tespit edilen tum hedeflerin ustune ID'sini yazar (ekran-uzayi, sabit
+     * boyut - kararli, buyume yok); sadece <b>isaretli</b> olanlarin etrafina
+     * ayrica sari cember (dunya-uzayi, zoom ile olceklenir) cizer.
      *
      * <p>Gain filtresi disinda kalan hedeflerin mark'i cizilmez (kayit silinmez,
      * hedef araliga geri girdiginde tekrar gorunur) - boylece ekrandaki gain
@@ -111,6 +147,7 @@ public final class Mark {
         gl.glColor3f(1f, 1f, 0f);
         gl.glLineWidth(2f);
         for (Mark mark : marks) {
+            if (!mark.marked) continue;      // isaretlenmemis hedefte sadece ID yazisi olur
             float[] p = mapper.world(mark);
             gl.glBegin(GL.GL_LINE_LOOP);
             for (int k = 0; k < CIRCLE_SEGMENTS; k++) {
