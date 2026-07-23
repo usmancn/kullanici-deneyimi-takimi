@@ -87,10 +87,9 @@ public final class CameraController {
         canvas.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
-            	if (minimap != null && minimapDragging) {
-            	    minimap.navigate(camera, e.getX(), e.getY(), canvas.getWidth(), canvas.getHeight());
-            	    return;
-            	}
+                if (minimap != null && e.getKeyCode() == KeyEvent.VK_TAB) {
+                    minimap.toggle();
+                }
             }
         });
     }
