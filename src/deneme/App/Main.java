@@ -188,22 +188,6 @@ public class Main {
         square.addActionListener(e -> {
             cards.show(center, CARD_SQUARE);
             gainSlider.setVisible(true);
-        });
-        waterfall.addActionListener(e -> {
-            cards.show(center, CARD_WATERFALL);
-            gainSlider.setVisible(false);
-        });
-        line.addActionListener(e -> {
-            cards.show(center, CARD_LINE);
-            gainSlider.setVisible(true);
-        });
-        circular.addActionListener(e -> {
-            cards.show(center, CARD_CIRCULAR);
-            gainSlider.setVisible(true);
-        });
-        square.addActionListener(e -> {
-            cards.show(center, CARD_SQUARE);
-            gainSlider.setVisible(true);
             focusCard(center);
         });
         waterfall.addActionListener(e -> {
