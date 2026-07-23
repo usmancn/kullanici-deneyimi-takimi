@@ -5,15 +5,18 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import deneme.Detection.TargetIdentifier;
 import deneme.MessageProcess.MessagePublisher;
 import deneme.MessageProcess.QueueMessage;
 
-public class Simulation {
+public class Simulation implements TargetIdentifier {
 	private double[][] data;
 	private final MessagePublisher publisher;
 	private int targetCount;
 	private static final int SCREEN_RESOLUTION = 1000;
 	private static final int FPS = 40;
+	
+	private Target[] targets;
 	
 	private int currentRowIndex = 0;
 	private ScheduledExecutorService scheduler;
@@ -27,7 +30,7 @@ public class Simulation {
 		sendLoop();
 	}
 	public void sendLoop() {
-		int period = SCREEN_RESOLUTION / FPS;
+		int period = 1000 / FPS;
 
 		this.scheduler = Executors.newSingleThreadScheduledExecutor();
 		scheduler.scheduleAtFixedRate(
@@ -53,7 +56,7 @@ public class Simulation {
 		publisher.publish(message);
 	}
 	public void placeTarget(int targetCount) {
-		Target [] targets = new Target[targetCount];
+		this.targets = new Target[targetCount];
 		Random random = new Random();
 		
 		for(int i = 0; i < targetCount; i++) {
@@ -67,7 +70,7 @@ public class Simulation {
 			boolean constraint = false;
 			
 			for(int j = 0; j < i; j++) {
-				if(Math.abs(x - targets[j].getCenterX()) < 20 && Math.abs(y - targets[j].getTopY()) < 20)
+				if(Math.abs(x - this.targets[j].getCenterX()) < 20 && Math.abs(y - this.targets[j].getTopY()) < 20)
 					constraint = true;
 			}
 			if(constraint) {
@@ -77,15 +80,45 @@ public class Simulation {
 				Target target = new Target();
 				target.setCenterX(x);
 				target.setTopY(y);
-				targets[i] = target;
+				this.targets[i] = target;
+				// hedefi thread-safe mark tablosuna kaydet (hasID + ID)
 				for(int k = x - target.getType().getWidth() / 2; k < x + target.getType().getWidth() / 2; k++) {
 					for(int t = y - target.getType().getHeight() / 2; t < y + target.getType().getHeight() / 2; t++) {
-						this.data[t][k] = target.getGainFactor(); 
+						if(t >= 0 && k>= 0 && t < SCREEN_RESOLUTION && k < SCREEN_RESOLUTION) {
+							this.data[t][k] = target.getGainFactor();
+						}
 					}
 				}
 			}
 		}
 		
+	}
+	
+	/**
+	 * Dedektorun tespit ettigi (x,y) merkezine denk gelen hedefin ID'sini doner.
+	 * Nokta bir hedefin kapladigi bolgeye dusuyorsa: ID varsa ID, yoksa null (false).
+	 * Hicbir hedefe denk gelmiyorsa null (false).
+	 */
+	@Override
+	public String identify(int x, int y) {
+		for (Target t : targets) {
+			if (t == null) continue;
+			int w = t.getType().getWidth();
+			int h = t.getType().getHeight();
+			if (Math.abs(x - t.getCenterX()) <= w / 2 && Math.abs(y - t.getTopY()) <= h / 2) {
+				return t.isHasID() ? t.getID() : null;
+			}
+		}
+		return null;
+	}
+
+	public Target findTarget(int centerX, int topY) {
+		for(Target t : targets) {
+			if(t.getCenterX() == centerX && t.getTopY() == topY) {
+				return t;
+			}
+		}
+		return null;
 	}
 	public void initializeData() {
 		this.data = new double[SCREEN_RESOLUTION][SCREEN_RESOLUTION];

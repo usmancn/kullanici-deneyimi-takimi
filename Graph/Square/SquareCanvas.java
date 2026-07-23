@@ -1,5 +1,6 @@
 package deneme.Graph.Square;
 
+import java.awt.Font;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.nio.FloatBuffer;
@@ -11,13 +12,17 @@ import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.GLCapabilities;
 import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.awt.GLCanvas;
+import com.jogamp.opengl.util.awt.TextRenderer;
 
+import deneme.App.GainFilterSlider;
 import deneme.GLCore.Camera;
+import deneme.GLCore.Mark;
 import deneme.GLCore.ShaderProgram;
+import deneme.GLCore.Viewport;
 import deneme.MessageProcess.MessageConsumer;
 import deneme.MessageProcess.QueueMessage;
 
-public class RadarCanvas extends GLCanvas implements GLEventListener {
+public class SquareCanvas extends GLCanvas implements GLEventListener {
 
     private static final int SCREEN_RESOLUTION = 1000;
     private static final int CELL_COUNT = SCREEN_RESOLUTION * SCREEN_RESOLUTION;
@@ -27,12 +32,15 @@ public class RadarCanvas extends GLCanvas implements GLEventListener {
     private volatile int scanRowIndex = 0;                     // scanline konumu
 
     private final ShaderProgram shader = new ShaderProgram();
+    private final GridLayer grid = new GridLayer();
+    private TextRenderer text;
     private final RowConsumer consumer;
 
     private final Camera camera = new Camera();
+    private final Viewport viewport = new Viewport();
 
     // GPU nesneleri
-    private int quadVBO;   // ekrani kaplayan tek dortgen (4 vertex: x,y,u,v)
+    private int quadVBO;  // ekrani kaplayan tek dortgen (4 vertex: x,y,u,v)
     private int gainTex;   // gain grid'i (SIZE x SIZE texture)
     private int scanVBO;   // scanline'in iki ucu
 
@@ -44,7 +52,7 @@ public class RadarCanvas extends GLCanvas implements GLEventListener {
     private int viewWidth = SCREEN_RESOLUTION;
     private int viewHeight = SCREEN_RESOLUTION;
 
-    public RadarCanvas(GLCapabilities caps, BlockingQueue<QueueMessage> queue) {
+    public SquareCanvas(GLCapabilities caps, BlockingQueue<QueueMessage> queue) {
         super(caps);
         this.consumer = new RowConsumer(queue);
         addGLEventListener(this);
@@ -52,9 +60,13 @@ public class RadarCanvas extends GLCanvas implements GLEventListener {
     }
 
     private void installCameraControls() {
+        // fare konumlari kare cizim alanina gore hesaplanir (pencere daha buyuk olabilir)
         addMouseWheelListener(e -> {
             boolean zoomIn = e.getWheelRotation() < 0;   // teker yukari -> yakinlas
-            camera.zoom(e.getX(), e.getY(), getWidth(), getHeight(), zoomIn);
+            int side = Viewport.side(getWidth(), getHeight());
+            camera.zoom(Viewport.mouseX(e.getX(), getWidth(), getHeight()),
+                        Viewport.mouseY(e.getY(), getWidth(), getHeight()),
+                        side, side, zoomIn);
         });
         addMouseListener(new MouseAdapter() {
             @Override public void mousePressed(MouseEvent e)  { camera.panPress(e.getX(), e.getY()); }
@@ -62,7 +74,8 @@ public class RadarCanvas extends GLCanvas implements GLEventListener {
         });
         addMouseMotionListener(new MouseAdapter() {
             @Override public void mouseDragged(MouseEvent e) {
-                camera.panDrag(e.getX(), e.getY(), getWidth(), getHeight());
+                int side = Viewport.side(getWidth(), getHeight());
+                camera.panDrag(e.getX(), e.getY(), side, side);
             }
         });
     }
@@ -90,6 +103,8 @@ public class RadarCanvas extends GLCanvas implements GLEventListener {
         gl.glClearColor(0f, 0f, 0f, 1f);
 
         shader.init(gl);
+        grid.init(gl);
+        text = new TextRenderer(new Font("SansSerif", Font.BOLD, 16), true, true);
 
         // ekrani kaplayan dortgen: dunya [0,SIZE] x [0,SIZE], UV [0,1] x [0,1]
         // interleaved: x, y, u, v  (TRIANGLE_STRIP sirasi)
@@ -144,9 +159,10 @@ public class RadarCanvas extends GLCanvas implements GLEventListener {
         gl.glClear(GL.GL_COLOR_BUFFER_BIT);
 
        
+        // viewport kare oldugu icin ayrica aspect duzeltmesi gerekmiyor
         camera.modelMatrix(matrix, 0f, 0f, 2f, 2f);
 
-        // gain grid'ini texture'a yukle 
+        // gain grid'ini texture'a yukle
         int i = 0;
         for (int row = 0; row < SCREEN_RESOLUTION; row++) {
             double[] r = image[row];
@@ -162,6 +178,7 @@ public class RadarCanvas extends GLCanvas implements GLEventListener {
 
         shader.use(gl);
         shader.setMatrix(gl, matrix);
+        shader.setGainFilter(gl, GainFilterSlider.filterMin(), GainFilterSlider.filterMax());
         shader.bindVertices(gl, quadVBO);
         gl.glDrawArrays(GL.GL_TRIANGLE_STRIP, 0, 4);
 
@@ -178,14 +195,20 @@ public class RadarCanvas extends GLCanvas implements GLEventListener {
         shader.bindScanPosition(gl, scanVBO);
         gl.glLineWidth(2f);
         gl.glDrawArrays(GL.GL_LINES, 0, 2);
+
+        // ---- grid cizgileri + eksen etiketleri ----
+        grid.draw(gl, matrix, camera, viewWidth, viewHeight);
+
+        // ---- tanimli hedefler: cember + ID (kare konum) ----
+        Mark.draw(gl, text, matrix, viewWidth, viewHeight, 22f, m -> new float[] { m.getCenterX(), m.getCenterY() });
     }
 
     @Override
     public void reshape(GLAutoDrawable drawable, int x, int y, int width, int height) {
         GL2 gl = drawable.getGL().getGL2();
-        gl.glViewport(0, 0, width, height);
-        this.viewWidth = width;
-        this.viewHeight = height;
+        viewport.apply(gl, width, height);          // ortalanmis kare, en fazla 1000x1000
+        this.viewWidth = viewport.side();
+        this.viewHeight = viewport.side();
     }
 
     @Override
@@ -193,6 +216,8 @@ public class RadarCanvas extends GLCanvas implements GLEventListener {
         GL2 gl = drawable.getGL().getGL2();
         gl.glDeleteBuffers(2, new int[] { quadVBO, scanVBO }, 0);
         gl.glDeleteTextures(1, new int[] { gainTex }, 0);
+        if (text != null) text.dispose();
+        grid.dispose(gl);
         shader.dispose(gl);
     }
 }

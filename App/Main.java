@@ -1,5 +1,6 @@
 package deneme.App;
 
+import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Dimension;
 import java.awt.event.WindowAdapter;
@@ -20,8 +21,10 @@ import com.jogamp.opengl.GLCapabilities;
 import com.jogamp.opengl.GLProfile;
 import com.jogamp.opengl.util.FPSAnimator;
 
+import deneme.Detection.ObjectDetector;
+import deneme.Graph.Circular.CircularCanvas;
 import deneme.Graph.Line.LineCanvas;
-import deneme.Graph.Square.RadarCanvas;
+import deneme.Graph.Square.SquareCanvas;
 import deneme.Graph.Waterfall.WaterfallCanvas;
 import deneme.MessageProcess.MessagePublisher;
 import deneme.MessageProcess.QueueMessage;
@@ -35,6 +38,7 @@ public class Main {
     private static final String CARD_SQUARE = "square";
     private static final String CARD_WATERFALL = "waterfall";
     private static final String CARD_LINE = "line";
+    private static final String CARD_CIRCULAR = "circular";
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(Main::start);
@@ -51,21 +55,29 @@ public class Main {
         BlockingQueue<QueueMessage> squareQueue    = new LinkedBlockingQueue<>();
         BlockingQueue<QueueMessage> waterfallQueue = new LinkedBlockingQueue<>();
         BlockingQueue<QueueMessage> lineQueue      = new LinkedBlockingQueue<>();
+        BlockingQueue<QueueMessage> circularQueue  = new LinkedBlockingQueue<>();
+        BlockingQueue<QueueMessage> detectionQueue = new LinkedBlockingQueue<>();
 
         MessagePublisher publisher = new MessagePublisher();
         publisher.subscribe(squareQueue);
         publisher.subscribe(waterfallQueue);
         publisher.subscribe(lineQueue);
+        publisher.subscribe(circularQueue);
+        publisher.subscribe(detectionQueue);
 
         Simulation simulation = new Simulation(targetCount, publisher);
+
+        // scanline tabanli obje dedektoru: obje bulunca Simulation'a ID sorar
+        ObjectDetector detector = new ObjectDetector(detectionQueue, simulation);
 
         // ---- 3) iki OpenGL canvas ----
         GLProfile profile = GLProfile.get(GLProfile.GL2);
         GLCapabilities caps = new GLCapabilities(profile);
 
-        RadarCanvas    squareCanvas    = new RadarCanvas(caps, squareQueue);
+        SquareCanvas   squareCanvas    = new SquareCanvas(caps, squareQueue);
         WaterfallCanvas waterfallCanvas = new WaterfallCanvas(caps, waterfallQueue);
         LineCanvas     lineCanvas      = new LineCanvas(caps, lineQueue);
+        CircularCanvas circularCanvas  = new CircularCanvas(caps, circularQueue);
 
         // ---- 4) CardLayout ile ikisini ust uste koy, menuden sec ----
         CardLayout cards = new CardLayout();
@@ -74,10 +86,14 @@ public class Main {
         center.add(squareCanvas, CARD_SQUARE);
         center.add(waterfallCanvas, CARD_WATERFALL);
         center.add(lineCanvas, CARD_LINE);
+        center.add(circularCanvas, CARD_CIRCULAR);
+
+        GainFilterSlider gainSlider = new GainFilterSlider();
 
         JFrame frame = new JFrame("Radar - Square / Waterfall");
-        frame.setJMenuBar(buildMenuBar(cards, center));
-        frame.getContentPane().add(center);
+        frame.setJMenuBar(buildMenuBar(cards, center, gainSlider));
+        frame.getContentPane().add(center, BorderLayout.CENTER);
+        frame.getContentPane().add(gainSlider, BorderLayout.SOUTH);
         frame.pack();
         frame.setLocationRelativeTo(null);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -85,6 +101,7 @@ public class Main {
         FPSAnimator squareAnim    = new FPSAnimator(squareCanvas, FPS, true);
         FPSAnimator waterfallAnim = new FPSAnimator(waterfallCanvas, FPS, true);
         FPSAnimator lineAnim      = new FPSAnimator(lineCanvas, FPS, true);
+        FPSAnimator circularAnim  = new FPSAnimator(circularCanvas, FPS, true);
 
         // ---- 5) kapatirken duzgun durdur ----
         frame.addWindowListener(new WindowAdapter() {
@@ -95,9 +112,12 @@ public class Main {
                     squareCanvas.stopConsuming();
                     waterfallCanvas.stopConsuming();
                     lineCanvas.stopConsuming();
+                    circularCanvas.stopConsuming();
+                    detector.stop();
                     squareAnim.stop();
                     waterfallAnim.stop();
                     lineAnim.stop();
+                    circularAnim.stop();
                 }).start();
             }
         });
@@ -109,9 +129,12 @@ public class Main {
         squareAnim.start();
         waterfallAnim.start();
         lineAnim.start();
+        circularAnim.start();
         squareCanvas.startConsuming();
         waterfallCanvas.startConsuming();
         lineCanvas.startConsuming();
+        circularCanvas.startConsuming();
+        detector.start();
         simulation.start();
     }
 
@@ -134,26 +157,31 @@ public class Main {
     }
 
     // ustte Square / Waterfall secim menusu
-    private static JMenuBar buildMenuBar(CardLayout cards, JPanel center) {
+    private static JMenuBar buildMenuBar(CardLayout cards, JPanel center, GainFilterSlider gainSlider) {
         JMenuBar bar = new JMenuBar();
         JMenu menu = new JMenu("Grafik");
 
         JRadioButtonMenuItem square    = new JRadioButtonMenuItem("Square", true);
         JRadioButtonMenuItem waterfall = new JRadioButtonMenuItem("Waterfall");
         JRadioButtonMenuItem line      = new JRadioButtonMenuItem("Line");
+        JRadioButtonMenuItem circular  = new JRadioButtonMenuItem("Circular");
 
         ButtonGroup group = new ButtonGroup();
         group.add(square);
         group.add(waterfall);
         group.add(line);
+        group.add(circular);
 
-        square.addActionListener(e    -> cards.show(center, CARD_SQUARE));
-        waterfall.addActionListener(e -> cards.show(center, CARD_WATERFALL));
-        line.addActionListener(e      -> cards.show(center, CARD_LINE));
+        // gain filtresi waterfall disindaki grafiklerde gorunur
+        square.addActionListener(e    -> { cards.show(center, CARD_SQUARE);    gainSlider.setVisible(true);  });
+        waterfall.addActionListener(e -> { cards.show(center, CARD_WATERFALL); gainSlider.setVisible(false); });
+        line.addActionListener(e      -> { cards.show(center, CARD_LINE);      gainSlider.setVisible(true);  });
+        circular.addActionListener(e  -> { cards.show(center, CARD_CIRCULAR);  gainSlider.setVisible(true);  });
 
         menu.add(square);
         menu.add(waterfall);
         menu.add(line);
+        menu.add(circular);
         bar.add(menu);
         return bar;
     }

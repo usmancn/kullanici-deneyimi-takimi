@@ -12,7 +12,9 @@ import com.jogamp.opengl.GLCapabilities;
 import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.awt.GLCanvas;
 
+import deneme.App.GainFilterSlider;
 import deneme.GLCore.Camera;
+import deneme.GLCore.Viewport;
 import deneme.Graph.Line.ShaderProgram;
 import deneme.MessageProcess.MessageConsumer;
 import deneme.MessageProcess.QueueMessage;
@@ -26,9 +28,11 @@ public class LineCanvas extends GLCanvas implements GLEventListener {
     private volatile int scanRowIndex = 0;                     // cizilecek Satir
 
     private final ShaderProgram shader = new ShaderProgram();
+    private final GridLayer grid = new GridLayer();
     private final RowConsumer consumer;
 
     private final Camera camera = new Camera();
+    private final Viewport viewport = new Viewport();
 
     private final float[] matrix = new float[16];
 
@@ -67,9 +71,13 @@ public class LineCanvas extends GLCanvas implements GLEventListener {
     }
     
     private void installCameraControls() {
+        // fare konumlari kare cizim alanina gore hesaplanir (pencere daha buyuk olabilir)
         addMouseWheelListener(e -> {
             boolean zoomIn = e.getWheelRotation() < 0;   // teker yukari -> yakinlas
-            camera.zoom(e.getX(), e.getY(), getWidth(), getHeight(), zoomIn);
+            int side = Viewport.side(getWidth(), getHeight());
+            camera.zoom(Viewport.mouseX(e.getX(), getWidth(), getHeight()),
+                        Viewport.mouseY(e.getY(), getWidth(), getHeight()),
+                        side, side, zoomIn);
         });
         addMouseListener(new MouseAdapter() {
             @Override public void mousePressed(MouseEvent e)  { camera.panPress(e.getX(), e.getY()); }
@@ -77,7 +85,8 @@ public class LineCanvas extends GLCanvas implements GLEventListener {
         });
         addMouseMotionListener(new MouseAdapter() {
             @Override public void mouseDragged(MouseEvent e) {
-                camera.panDrag(e.getX(), e.getY(), getWidth(), getHeight());
+                int side = Viewport.side(getWidth(), getHeight());
+                camera.panDrag(e.getX(), e.getY(), side, side);
             }
         });
     }
@@ -89,6 +98,9 @@ public class LineCanvas extends GLCanvas implements GLEventListener {
 
         // kameranin gorunur araligi -> NDC [-1,1] zoom/pan buradan gelir
         camera.modelMatrix(matrix, 0f, 0f, 2f, 2f);
+
+        // ---- sabit grid (veri cizgilerinin altinda kalsin diye once) ----
+        grid.draw(gl, matrix, viewWidth, viewHeight);
 
         int k = 0;
         int t = 0;
@@ -114,6 +126,7 @@ public class LineCanvas extends GLCanvas implements GLEventListener {
 
         shader.use(gl);
         shader.setMatrix(gl, matrix);
+        shader.setGainFilter(gl, GainFilterSlider.filterMin(), GainFilterSlider.filterMax());
         shader.bindVertices(gl, lineVBO);
         gl.glDrawArrays(GL.GL_LINE_STRIP, 0, SCREEN_RESOLUTION);
 
@@ -124,6 +137,7 @@ public class LineCanvas extends GLCanvas implements GLEventListener {
 
         shader.useAverage(gl);
         shader.setAverageMatrix(gl, matrix);
+        shader.setAverageGainFilter(gl, GainFilterSlider.filterMin(), GainFilterSlider.filterMax());
         shader.bindAverageVertices(gl, averageVBO);
         gl.glDrawArrays(GL.GL_LINE_STRIP, 0, SCREEN_RESOLUTION);
 	}
@@ -140,6 +154,7 @@ public class LineCanvas extends GLCanvas implements GLEventListener {
         gl.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA);
 
         shader.init(gl);
+        grid.init(gl);
 
         int[] ids = new int[2];
         gl.glGenBuffers(2, ids, 0);
@@ -158,15 +173,16 @@ public class LineCanvas extends GLCanvas implements GLEventListener {
 	@Override
     public void reshape(GLAutoDrawable drawable, int x, int y, int width, int height) {
         GL2 gl = drawable.getGL().getGL2();
-        gl.glViewport(0, 0, width, height);
-        this.viewWidth = width;
-        this.viewHeight = height;
+        viewport.apply(gl, width, height);          // ortalanmis kare, en fazla 1000x1000
+        this.viewWidth = viewport.side();
+        this.viewHeight = viewport.side();
     }
 
     @Override
     public void dispose(GLAutoDrawable drawable) {
         GL2 gl = drawable.getGL().getGL2();
         gl.glDeleteBuffers(2, new int[] { lineVBO, averageVBO }, 0);
+        grid.dispose(gl);
         shader.dispose(gl);
     }
 }

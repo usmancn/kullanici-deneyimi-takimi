@@ -14,6 +14,7 @@ import com.jogamp.opengl.awt.GLCanvas;
 
 import deneme.GLCore.Camera;
 import deneme.GLCore.ShaderProgram;
+import deneme.GLCore.Viewport;
 import deneme.MessageProcess.MessageConsumer;
 import deneme.MessageProcess.QueueMessage;
 
@@ -32,6 +33,7 @@ public class WaterfallCanvas extends GLCanvas implements GLEventListener {
     private final RowConsumer consumer;
 
     private final Camera camera = new Camera();
+    private final Viewport viewport = new Viewport();
 
     // GPU nesneleri
     private int quadVBO;   // ekrani kaplayan tek dortgen (4 vertex: x,y,u,v)
@@ -54,9 +56,13 @@ public class WaterfallCanvas extends GLCanvas implements GLEventListener {
     }
 
     private void installCameraControls() {
+        // fare konumlari kare cizim alanina gore hesaplanir (pencere daha buyuk olabilir)
         addMouseWheelListener(e -> {
             boolean zoomIn = e.getWheelRotation() < 0;   // teker yukari -> yakinlas
-            camera.zoom(e.getX(), e.getY(), getWidth(), getHeight(), zoomIn);
+            int side = Viewport.side(getWidth(), getHeight());
+            camera.zoom(Viewport.mouseX(e.getX(), getWidth(), getHeight()),
+                        Viewport.mouseY(e.getY(), getWidth(), getHeight()),
+                        side, side, zoomIn);
         });
         addMouseListener(new MouseAdapter() {
             @Override public void mousePressed(MouseEvent e)  { camera.panPress(e.getX(), e.getY()); }
@@ -64,7 +70,8 @@ public class WaterfallCanvas extends GLCanvas implements GLEventListener {
         });
         addMouseMotionListener(new MouseAdapter() {
             @Override public void mouseDragged(MouseEvent e) {
-                camera.panDrag(e.getX(), e.getY(), getWidth(), getHeight());
+                int side = Viewport.side(getWidth(), getHeight());
+                camera.panDrag(e.getX(), e.getY(), side, side);
             }
         });
     }
@@ -159,7 +166,7 @@ public class WaterfallCanvas extends GLCanvas implements GLEventListener {
     @Override
     public void reshape(GLAutoDrawable drawable, int x, int y, int width, int height) {
         GL2 gl = drawable.getGL().getGL2();
-        gl.glViewport(0, 0, width, height);
+        viewport.apply(gl, width, height);          // ortalanmis kare, en fazla 1000x1000
     }
 
     @Override

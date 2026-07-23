@@ -158,6 +158,24 @@ public class Camera {
         range(matrix, worldCenterX, worldCenterY, widthWorld, heightWorld, 0f, WORLD_SIZE, 0f, WORLD_SIZE);
     }
 
+    /**
+     * En-boy (aspect) duzeltmesi: pencere kare degilken dunyanin ezilmesini onler.
+     * Kare dunya her zaman kare kalir (cember yuvarlak, kenarlar orantili);
+     * genis pencerede yanlar, uzun pencerede alt-ust letterbox olur.
+     */
+    public static void applyAspect(float[] matrix, int width, int height) {
+        if (width <= 0 || height <= 0) return;
+        float scaleX = 1f, scaleY = 1f;
+        if (width >= height) {
+            scaleX = (float) height / width;   // genis pencere -> x'i sikistir
+        } else {
+            scaleY = (float) width / height;   // uzun pencere -> y'yi sikistir
+        }
+        // NDC x'i olusturan tum terimler *scaleX, NDC y'yi olusturanlar *scaleY
+        matrix[0] *= scaleX; matrix[4] *= scaleX; matrix[8]  *= scaleX; matrix[12] *= scaleX;
+        matrix[1] *= scaleY; matrix[5] *= scaleY; matrix[9]  *= scaleY; matrix[13] *= scaleY;
+    }
+
     private static void range(float[] matrix, float worldCenterX, float worldCenterY,
                               float widthWorld, float heightWorld,
                               float viewMinX, float viewMaxX, float viewMinY, float viewMaxY) {

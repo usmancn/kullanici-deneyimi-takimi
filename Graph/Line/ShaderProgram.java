@@ -9,22 +9,32 @@ public class ShaderProgram {
 	        "#version 120\n" +
 	        "uniform mat4 matrix;\n" +
 	        "attribute vec2 inPosition;\n" +
+	        "varying float vGain;\n" +
 	        "void main()\n" +
 	        "{\n" +
+	        "    vGain = inPosition.y / 1000.0;\n" +   // y = gain*1000 -> gain
 	        "    gl_Position = matrix * vec4(inPosition, 0.0, 1.0);\n" +
 	        "}\n";
 	private static final String RASTER_120 =
 	        "#version 120\n" +
 	        "uniform vec3 lineColor;\n" +
+	        "uniform float filterMin;\n" +
+	        "uniform float filterMax;\n" +
+	        "varying float vGain;\n" +
 	        "void main()\n" +
 	        "{\n" +
+	        "    if (vGain < filterMin || vGain > filterMax) discard;\n" +
 	        "    gl_FragColor = vec4(lineColor, 1.0);\n" +
 	        "}\n";
 	private static final String AVERAGE_RASTER_120 =
 	        "#version 120\n" +
 	        "uniform vec3 averageLineColor;\n" +
+	        "uniform float filterMin;\n" +
+	        "uniform float filterMax;\n" +
+	        "varying float vGain;\n" +
 	        "void main()\n" +
 	        "{\n" +
+	        "    if (vGain < filterMin || vGain > filterMax) discard;\n" +
 	        "    gl_FragColor = vec4(averageLineColor, 0.3);\n" +
 	        "}\n";
 
@@ -34,10 +44,14 @@ public class ShaderProgram {
 	private int attribPosition;
 	private int uniformMatrix;
 	private int uniformLineColor;
+	private int uniformFilterMin;
+	private int uniformFilterMax;
 
 	private int averageAttribPosition;
 	private int averageUniformMatrix;
 	private int uniformAverageLineColor;
+	private int averageFilterMin;
+	private int averageFilterMax;
 
 	public void init(GL2 gl) {
 		int vertexShader    = compile(gl, GL2ES2.GL_VERTEX_SHADER,   VERTEX_120);
@@ -58,6 +72,8 @@ public class ShaderProgram {
 		attribPosition   = gl.glGetAttribLocation(lineProgram, "inPosition");
 		uniformMatrix    = gl.glGetUniformLocation(lineProgram, "matrix");
 		uniformLineColor = gl.glGetUniformLocation(lineProgram, "lineColor");
+		uniformFilterMin = gl.glGetUniformLocation(lineProgram, "filterMin");
+		uniformFilterMax = gl.glGetUniformLocation(lineProgram, "filterMax");
 
 		averageLineProgram = gl.glCreateProgram();
 		gl.glAttachShader(averageLineProgram, vertexShader);
@@ -72,6 +88,8 @@ public class ShaderProgram {
 		averageAttribPosition   = gl.glGetAttribLocation(averageLineProgram, "inPosition");
 		averageUniformMatrix    = gl.glGetUniformLocation(averageLineProgram, "matrix");
 		uniformAverageLineColor = gl.glGetUniformLocation(averageLineProgram, "averageLineColor");
+		averageFilterMin        = gl.glGetUniformLocation(averageLineProgram, "filterMin");
+		averageFilterMax        = gl.glGetUniformLocation(averageLineProgram, "filterMax");
 
 		
 		gl.glDeleteShader(vertexShader);
@@ -81,8 +99,10 @@ public class ShaderProgram {
 		
 		gl.glUseProgram(lineProgram);
 		setLineColor(gl, 0.3f, 1.0f, 0.4f);
+		setGainFilter(gl, 0.0f, 1.0f);
 		gl.glUseProgram(averageLineProgram);
 		setAverageLineColor(gl, 1.0f, 0.3f, 0.4f);
+		setAverageGainFilter(gl, 0.0f, 1.0f);
 		gl.glUseProgram(0);
 	}
 
@@ -136,6 +156,18 @@ public class ShaderProgram {
 
 	public void setAverageLineColor(GL2 gl, float r, float g, float b) {
 		gl.glUniform3f(uniformAverageLineColor, r, g, b);
+	}
+
+	/** Ana cizgi programi icin gain filtre araligi (use() sonrasi cagrilir). */
+	public void setGainFilter(GL2 gl, float min, float max) {
+		gl.glUniform1f(uniformFilterMin, min);
+		gl.glUniform1f(uniformFilterMax, max);
+	}
+
+	/** Ortalama cizgi programi icin gain filtre araligi (useAverage() sonrasi cagrilir). */
+	public void setAverageGainFilter(GL2 gl, float min, float max) {
+		gl.glUniform1f(averageFilterMin, min);
+		gl.glUniform1f(averageFilterMax, max);
 	}
 
 	public void dispose(GL2 gl) {
