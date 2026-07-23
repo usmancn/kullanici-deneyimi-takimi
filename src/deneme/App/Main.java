@@ -74,10 +74,10 @@ public class Main {
         GLProfile profile = GLProfile.get(GLProfile.GL2);
         GLCapabilities caps = new GLCapabilities(profile);
 
-        SquareCanvas squareCanvas = new SquareCanvas(caps, squareQueue);
+        SquareCanvas squareCanvas = new SquareCanvas(caps, squareQueue, simulation);
         WaterfallCanvas waterfallCanvas = new WaterfallCanvas(caps, waterfallQueue);
         LineCanvas lineCanvas = new LineCanvas(caps, lineQueue);
-        CircularCanvas circularCanvas = new CircularCanvas(caps, circularQueue);
+        CircularCanvas circularCanvas = new CircularCanvas(caps, circularQueue, simulation);
 
         // ---- 4) CardLayout ile ikisini ust uste koy, menuden sec ----
         CardLayout cards = new CardLayout();
@@ -124,8 +124,8 @@ public class Main {
 
         frame.setVisible(true);
         cards.show(center, CARD_SQUARE); // acilista square
-        cards.show(center, CARD_SQUARE);   // acilista square
-        squareCanvas.requestFocusInWindow();   // TAB (minimap) icin odak canvas'ta olsun
+        cards.show(center, CARD_SQUARE); // acilista square
+        squareCanvas.requestFocusInWindow(); // TAB (minimap) icin odak canvas'ta olsun
 
         // ---- 6) her sey calissin ----
         squareAnim.start();
@@ -201,10 +201,26 @@ public class Main {
             cards.show(center, CARD_CIRCULAR);
             gainSlider.setVisible(true);
         });
-        square.addActionListener(e    -> { cards.show(center, CARD_SQUARE);    gainSlider.setVisible(true);  focusCard(center); });
-        waterfall.addActionListener(e -> { cards.show(center, CARD_WATERFALL); gainSlider.setVisible(false); focusCard(center); });
-        line.addActionListener(e      -> { cards.show(center, CARD_LINE);      gainSlider.setVisible(true);  focusCard(center); });
-        circular.addActionListener(e  -> { cards.show(center, CARD_CIRCULAR);  gainSlider.setVisible(true);  focusCard(center); });
+        square.addActionListener(e -> {
+            cards.show(center, CARD_SQUARE);
+            gainSlider.setVisible(true);
+            focusCard(center);
+        });
+        waterfall.addActionListener(e -> {
+            cards.show(center, CARD_WATERFALL);
+            gainSlider.setVisible(false);
+            focusCard(center);
+        });
+        line.addActionListener(e -> {
+            cards.show(center, CARD_LINE);
+            gainSlider.setVisible(true);
+            focusCard(center);
+        });
+        circular.addActionListener(e -> {
+            cards.show(center, CARD_CIRCULAR);
+            gainSlider.setVisible(true);
+            focusCard(center);
+        });
 
         menu.add(square);
         menu.add(waterfall);

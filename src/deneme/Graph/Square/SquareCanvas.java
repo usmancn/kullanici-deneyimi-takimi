@@ -142,15 +142,16 @@ public class SquareCanvas extends GLCanvas implements GLEventListener {
         int localX = Viewport.mouseX(e.getX(), getWidth(), getHeight());
         int localY = Viewport.mouseY(e.getY(), getWidth(), getHeight());
 
-        int worlX = Math.round(camera.screenToWorldX(localX, side, side));
-        int worldY = Math.round(camera.screenToWorldY(localY, side, side));
+        int worldX = Math.round(camera.screenToWorldX(localX, side));
+        int worldY = Math.round(camera.screenToWorldY(localY, side));
 
-        Target target = simulation.findTargetAt(worlX, worldY);
+        Target target = simulation.findTargetAt(worldX, worldY);
 
         if (target == null) {
             return;
         }
 
+        JPopupMenu.setDefaultLightWeightPopupEnabled(false);
         JPopupMenu menu = new JPopupMenu();
 
         menu.add(new JMenuItem("Konum: (" + target.getCenterX() + ", " + target.getTopY() + ")"));

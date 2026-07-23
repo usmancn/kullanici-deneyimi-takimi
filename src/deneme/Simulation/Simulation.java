@@ -120,6 +120,28 @@ public class Simulation implements TargetIdentifier {
 		}
 		return null;
 	}
+
+	public Target findTargetAt(int x, int y) {
+		for(Target target : targets) {
+			if(target == null) {
+				continue;
+			}
+
+			int width = target.getType().getWidth();
+			int height = target.getType().getHeight();
+
+			int left = target.getCenterX() - width / 2;
+			int right = target.getCenterX() + width / 2;
+			int top = target.getTopY() - height / 2;
+			int bottom = target.getTopY() + height / 2;
+
+			if(x >= left && x < right && y >= top && y < bottom) {
+				return target;
+			}
+		}
+		return null;
+	}
+
 	public void initializeData() {
 		this.data = new double[SCREEN_RESOLUTION][SCREEN_RESOLUTION];
 		Random random = new Random();

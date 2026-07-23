@@ -96,6 +96,12 @@ public class CircularCanvas extends GLCanvas implements GLEventListener {
             @Override
             public void mousePressed(MouseEvent e) {
                 requestFocusInWindow(); // TAB tuslarini alabilmek icin
+
+                if (e.isPopupTrigger()) {
+                    showTargetPopup(e);
+                    return;
+                }
+
                 if (minimap.contains(e.getX(), e.getY(), getWidth(), getHeight())) {
                     minimapDragging = true;
                     minimap.navigate(camera, e.getX(), e.getY(), getWidth(), getHeight());
@@ -176,6 +182,7 @@ public class CircularCanvas extends GLCanvas implements GLEventListener {
             return;
         }
 
+        JPopupMenu.setDefaultLightWeightPopupEnabled(false);
         JPopupMenu menu = new JPopupMenu();
 
         menu.add(new JMenuItem("Konum: (" + target.getCenterX() + ", " + target.getTopY() + ")"));
