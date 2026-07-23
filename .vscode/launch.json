@@ -1,0 +1,13 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Radar Uygulaması",
+            "request": "launch",
+            "mainClass": "deneme.App.Main",
+            "runtimeExecutable": "C:\\Program Files\\ojdkbuild\\java-11-openjdk-11.0.15-1\\bin\\java.exe",
+            "vmArgs": "--add-exports java.base/java.lang=ALL-UNNAMED --add-exports java.desktop/sun.awt=ALL-UNNAMED --add-exports java.desktop/sun.java2d=ALL-UNNAMED"
+        }
+    ]
+}

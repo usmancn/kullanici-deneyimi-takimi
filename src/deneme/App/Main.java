@@ -48,14 +48,14 @@ public class Main {
         // ---- 1) baslangic ekrani: hedef sayisi ----
         int targetCount = askTargetCount();
         if (targetCount < 0) {
-            return;   // kullanici iptal etti
+            return; // kullanici iptal etti
         }
 
         // ---- 2) mesaj hatti: Simulation -> (square queue, waterfall queue) ----
-        BlockingQueue<QueueMessage> squareQueue    = new LinkedBlockingQueue<>();
+        BlockingQueue<QueueMessage> squareQueue = new LinkedBlockingQueue<>();
         BlockingQueue<QueueMessage> waterfallQueue = new LinkedBlockingQueue<>();
-        BlockingQueue<QueueMessage> lineQueue      = new LinkedBlockingQueue<>();
-        BlockingQueue<QueueMessage> circularQueue  = new LinkedBlockingQueue<>();
+        BlockingQueue<QueueMessage> lineQueue = new LinkedBlockingQueue<>();
+        BlockingQueue<QueueMessage> circularQueue = new LinkedBlockingQueue<>();
         BlockingQueue<QueueMessage> detectionQueue = new LinkedBlockingQueue<>();
 
         MessagePublisher publisher = new MessagePublisher();
@@ -74,10 +74,10 @@ public class Main {
         GLProfile profile = GLProfile.get(GLProfile.GL2);
         GLCapabilities caps = new GLCapabilities(profile);
 
-        SquareCanvas   squareCanvas    = new SquareCanvas(caps, squareQueue);
+        SquareCanvas squareCanvas = new SquareCanvas(caps, squareQueue);
         WaterfallCanvas waterfallCanvas = new WaterfallCanvas(caps, waterfallQueue);
-        LineCanvas     lineCanvas      = new LineCanvas(caps, lineQueue);
-        CircularCanvas circularCanvas  = new CircularCanvas(caps, circularQueue);
+        LineCanvas lineCanvas = new LineCanvas(caps, lineQueue);
+        CircularCanvas circularCanvas = new CircularCanvas(caps, circularQueue);
 
         // ---- 4) CardLayout ile ikisini ust uste koy, menuden sec ----
         CardLayout cards = new CardLayout();
@@ -98,10 +98,10 @@ public class Main {
         frame.setLocationRelativeTo(null);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        FPSAnimator squareAnim    = new FPSAnimator(squareCanvas, FPS, true);
+        FPSAnimator squareAnim = new FPSAnimator(squareCanvas, FPS, true);
         FPSAnimator waterfallAnim = new FPSAnimator(waterfallCanvas, FPS, true);
-        FPSAnimator lineAnim      = new FPSAnimator(lineCanvas, FPS, true);
-        FPSAnimator circularAnim  = new FPSAnimator(circularCanvas, FPS, true);
+        FPSAnimator lineAnim = new FPSAnimator(lineCanvas, FPS, true);
+        FPSAnimator circularAnim = new FPSAnimator(circularCanvas, FPS, true);
 
         // ---- 5) kapatirken duzgun durdur ----
         frame.addWindowListener(new WindowAdapter() {
@@ -123,7 +123,7 @@ public class Main {
         });
 
         frame.setVisible(true);
-        cards.show(center, CARD_SQUARE);   // acilista square
+        cards.show(center, CARD_SQUARE); // acilista square
 
         // ---- 6) her sey calissin ----
         squareAnim.start();
@@ -147,12 +147,12 @@ public class Main {
                 JOptionPane.QUESTION_MESSAGE);
 
         if (input == null) {
-            return -1;   // iptal / kapatma
+            return -1; // iptal / kapatma
         }
         try {
             return Math.max(0, Integer.parseInt(input.trim()));
         } catch (NumberFormatException ex) {
-            return DEFAULT_TARGET_COUNT;   // gecersiz giris -> varsayilan
+            return DEFAULT_TARGET_COUNT; // gecersiz giris -> varsayilan
         }
     }
 
@@ -161,10 +161,10 @@ public class Main {
         JMenuBar bar = new JMenuBar();
         JMenu menu = new JMenu("Grafik");
 
-        JRadioButtonMenuItem square    = new JRadioButtonMenuItem("Square", true);
+        JRadioButtonMenuItem square = new JRadioButtonMenuItem("Square", true);
         JRadioButtonMenuItem waterfall = new JRadioButtonMenuItem("Waterfall");
-        JRadioButtonMenuItem line      = new JRadioButtonMenuItem("Line");
-        JRadioButtonMenuItem circular  = new JRadioButtonMenuItem("Circular");
+        JRadioButtonMenuItem line = new JRadioButtonMenuItem("Line");
+        JRadioButtonMenuItem circular = new JRadioButtonMenuItem("Circular");
 
         ButtonGroup group = new ButtonGroup();
         group.add(square);
@@ -173,10 +173,22 @@ public class Main {
         group.add(circular);
 
         // gain filtresi waterfall disindaki grafiklerde gorunur
-        square.addActionListener(e    -> { cards.show(center, CARD_SQUARE);    gainSlider.setVisible(true);  });
-        waterfall.addActionListener(e -> { cards.show(center, CARD_WATERFALL); gainSlider.setVisible(false); });
-        line.addActionListener(e      -> { cards.show(center, CARD_LINE);      gainSlider.setVisible(true);  });
-        circular.addActionListener(e  -> { cards.show(center, CARD_CIRCULAR);  gainSlider.setVisible(true);  });
+        square.addActionListener(e -> {
+            cards.show(center, CARD_SQUARE);
+            gainSlider.setVisible(true);
+        });
+        waterfall.addActionListener(e -> {
+            cards.show(center, CARD_WATERFALL);
+            gainSlider.setVisible(false);
+        });
+        line.addActionListener(e -> {
+            cards.show(center, CARD_LINE);
+            gainSlider.setVisible(true);
+        });
+        circular.addActionListener(e -> {
+            cards.show(center, CARD_CIRCULAR);
+            gainSlider.setVisible(true);
+        });
 
         menu.add(square);
         menu.add(waterfall);

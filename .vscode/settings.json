@@ -1,0 +1,15 @@
+{
+  "java.project.sourcePaths": [
+    "src"
+  ],
+  "java.project.referencedLibraries": [
+    "lib/**/*.jar"
+  ],
+  "java.configuration.runtimes": [
+    {
+      "name": "JavaSE-11",
+      "path": "C:\\Program Files\\ojdkbuild\\java-11-openjdk-11.0.15-1",
+      "default": true
+    }
+  ]
+}
