@@ -36,21 +36,24 @@ public final class Mark {
     private final int centerX;
     private final int centerY;
     private final String id;
+    private final float gain;   // hedefin gain degeri: gain filtresiyle karsilastirilir
 
-    private Mark(int centerX, int centerY, String id) {
+    private Mark(int centerX, int centerY, String id, float gain) {
         this.centerX = centerX;
         this.centerY = centerY;
         this.id = id;
+        this.gain = gain;
     }
 
     public int getCenterX() { return centerX; }
     public int getCenterY() { return centerY; }
     public String getId()   { return id; }
+    public float getGain()  { return gain; }
 
     /** Tanimli (ID'li) bir hedefi mark olarak kaydeder/gunceller. ID null ise yok sayar. */
-    public static void register(int centerX, int centerY, String id) {
+    public static void register(int centerX, int centerY, String id, float gain) {
         if (id == null) return;
-        MARKS.put(id, new Mark(centerX, centerY, id));
+        MARKS.put(id, new Mark(centerX, centerY, id, gain));
     }
 
     public static Collection<Mark> all() {
@@ -65,12 +68,26 @@ public final class Mark {
      * Tum marklarin etrafina cember (dunya-uzayi, zoom ile olceklenir) cizer,
      * ustune ID yazar (ekran-uzayi, sabit boyut - kararli, buyume yok).
      *
+     * <p>Gain filtresi disinda kalan hedeflerin mark'i cizilmez (kayit silinmez,
+     * hedef araliga geri girdiginde tekrar gorunur) - boylece ekrandaki gain
+     * gorseli ile isaretler tutarli kalir.
+     *
      * @param width/height drawable piksel boyutu (ID'yi piksele projekte etmek icin)
      * @param radius       cember yaricapi (dunya birimi)
+     * @param filterMin/filterMax gain filtresi araligi (shader ile ayni)
      */
     public static void draw(GL2 gl, TextRenderer text, float[] matrix,
-                            int width, int height, float radius, Mapper mapper) {
-        Collection<Mark> marks = MARKS.values();
+                            int width, int height, float radius,
+                            float filterMin, float filterMax, Mapper mapper) {
+        if (MARKS.isEmpty()) return;
+
+        // sadece gain'i filtre araliginda olanlar
+        Collection<Mark> marks = new java.util.ArrayList<>();
+        for (Mark mark : MARKS.values()) {
+            if (mark.gain >= filterMin && mark.gain <= filterMax) {
+                marks.add(mark);
+            }
+        }
         if (marks.isEmpty()) return;
 
         // ---- cemberler (sari) : dunya-uzayi, kamera matrisi projeksiyonda ----

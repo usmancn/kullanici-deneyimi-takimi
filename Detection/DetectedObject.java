@@ -13,9 +13,10 @@ public class DetectedObject {
     public final int yMin;
     public final int yMax;
     public final String id;   // ID varsa; yoksa null (false)
+    public final double gain; // obje uzerindeki en yuksek gain
 
     public DetectedObject(int centerX, int centerY,
-                          int xMin, int xMax, int yMin, int yMax, String id) {
+                          int xMin, int xMax, int yMin, int yMax, String id, double gain) {
         this.centerX = centerX;
         this.centerY = centerY;
         this.xMin = xMin;
@@ -23,6 +24,7 @@ public class DetectedObject {
         this.yMin = yMin;
         this.yMax = yMax;
         this.id = id;
+        this.gain = gain;
     }
 
     /** Hedefin ID'si var mi (yani tanimli bir hedefe mi denk geldi). */
@@ -34,6 +36,6 @@ public class DetectedObject {
     public String toString() {
         return "DetectedObject[merkez=(" + centerX + "," + centerY + "), "
                 + "x=[" + xMin + "," + xMax + "], y=[" + yMin + "," + yMax + "], "
-                + "id=" + (id != null ? id : "false") + "]";
+                + "id=" + (id != null ? id : "false") + ", gain=" + gain + "]";
     }
 }

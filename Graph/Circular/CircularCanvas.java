@@ -249,7 +249,8 @@ public class CircularCanvas extends GLCanvas implements GLEventListener {
         grid.draw(gl, matrix, viewWidth, viewHeight);
 
         // ---- tanimli hedefler: cember + ID (polar konum) ----
-        Mark.draw(gl, text, matrix, viewWidth, viewHeight, 18f, m -> {
+        Mark.draw(gl, text, matrix, viewWidth, viewHeight, 18f,
+                  GainFilterSlider.filterMin(), GainFilterSlider.filterMax(), m -> {
             // shader ile ayni eslesme: a = bearing/2pi  =>  bearing = x/SIZE * 2pi
             // bearing kuzeyden (yukari) saat yonunde olculur: x = sin, y = cos
             double bearing = 2.0 * Math.PI * (m.getCenterX() / (double) SCREEN_RESOLUTION);

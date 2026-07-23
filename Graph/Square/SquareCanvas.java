@@ -230,7 +230,9 @@ public class SquareCanvas extends GLCanvas implements GLEventListener {
         grid.draw(gl, matrix, camera, viewWidth, viewHeight);
 
         // ---- tanimli hedefler: cember + ID (kare konum) ----
-        Mark.draw(gl, text, matrix, viewWidth, viewHeight, 22f, m -> new float[] { m.getCenterX(), m.getCenterY() });
+        Mark.draw(gl, text, matrix, viewWidth, viewHeight, 22f,
+                GainFilterSlider.filterMin(), GainFilterSlider.filterMax(),
+                m -> new float[] { m.getCenterX(), m.getCenterY() });
 
         drawMinimap(gl);
     }

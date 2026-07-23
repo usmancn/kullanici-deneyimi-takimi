@@ -37,6 +37,7 @@ public class ObjectDetector extends MessageConsumer {
         int rightColumn;   // objenin en sag sutunu
         int startRow;      // objenin ilk goruldugu satir
         int endRow;        // objenin son goruldugu satir
+        double gain;       // obje uzerindeki en yuksek gain (hedefin gain factor'u)
         boolean continuedThisRow;   // bu satirda devam etti mi
 
         OpenObject(int leftColumn, int rightColumn, int row) {
@@ -85,7 +86,7 @@ public class ObjectDetector extends MessageConsumer {
                 while (column < rowWidth && rowGains[column] >= GAIN_THRESHOLD) {
                     column++;
                 }
-                mergeRun(runStart, column - 1, rowIndex);   // [runStart, column-1] dahil
+                mergeRun(runStart, column - 1, rowIndex, rowGains);   // [runStart, column-1] dahil
             } else {
                 column++;
             }
@@ -103,7 +104,9 @@ public class ObjectDetector extends MessageConsumer {
     }
 
     /** Bir yatay kosuyu (run) x'te ortustugu acik objeye ekler; yoksa yeni obje acar. */
-    private void mergeRun(int runStart, int runEnd, int rowIndex) {
+    private void mergeRun(int runStart, int runEnd, int rowIndex, double[] rowGains) {
+        double runGain = maxGain(rowGains, runStart, runEnd);
+
         OpenObject match = null;
         for (OpenObject object : openObjects) {
             if (runStart <= object.rightColumn && runEnd >= object.leftColumn) {   // x'te ortusme
@@ -115,12 +118,23 @@ public class ObjectDetector extends MessageConsumer {
             match.leftColumn = Math.min(match.leftColumn, runStart);
             match.rightColumn = Math.max(match.rightColumn, runEnd);
             match.endRow = rowIndex;
+            match.gain = Math.max(match.gain, runGain);
             match.continuedThisRow = true;
         } else {
             OpenObject created = new OpenObject(runStart, runEnd, rowIndex);
+            created.gain = runGain;
             created.continuedThisRow = true;
             openObjects.add(created);
         }
+    }
+
+    /** [from, to] araligindaki en yuksek gain (hedef bolgesi sabit gain ile dolduruldugu icin hedefin gain factor'u). */
+    private static double maxGain(double[] rowGains, int from, int to) {
+        double max = 0;
+        for (int i = from; i <= to && i < rowGains.length; i++) {
+            if (rowGains[i] > max) max = rowGains[i];
+        }
+        return max;
     }
 
     /** Objeyi kapatir: merkezini Simulation'a sorup sonucu saklar, ID varsa mark'lar. */
@@ -131,10 +145,12 @@ public class ObjectDetector extends MessageConsumer {
 
         detectedObjects.add(new DetectedObject(
                 centerX, centerY,
-                object.leftColumn, object.rightColumn, object.startRow, object.endRow, id));
+                object.leftColumn, object.rightColumn, object.startRow, object.endRow,
+                id, object.gain));
 
         if (id != null) {
-            Mark.register(centerX, centerY, id);   // tanimli hedef -> ekranda isaretlenir
+            // gain de saklanir: gain filtresi disinda kalirsa mark cizilmez
+            Mark.register(centerX, centerY, id, (float) object.gain);
         }
     }
 
