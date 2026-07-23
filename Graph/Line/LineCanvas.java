@@ -1,7 +1,5 @@
 package deneme.Graph.Line;
 
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.nio.FloatBuffer;
 import java.util.concurrent.BlockingQueue;
 
@@ -18,8 +16,10 @@ import deneme.GLCore.Viewport;
 import deneme.Graph.Line.ShaderProgram;
 import deneme.MessageProcess.MessageConsumer;
 import deneme.MessageProcess.QueueMessage;
+import deneme.Interfaces.GraphLifecycle;
+import deneme.Controller.CameraController;
 
-public class LineCanvas extends GLCanvas implements GLEventListener {
+public class LineCanvas extends GLCanvas implements GLEventListener, GraphLifecycle{
 	
 	private static final int SCREEN_RESOLUTION = 1000;
 
@@ -47,7 +47,9 @@ public class LineCanvas extends GLCanvas implements GLEventListener {
     private int viewWidth = SCREEN_RESOLUTION;
     private int viewHeight = SCREEN_RESOLUTION;
     
+    @Override
     public void startConsuming() { consumer.start(); }
+    @Override
     public void stopConsuming()  { consumer.stop(); }
 
     private class RowConsumer extends MessageConsumer {
@@ -72,23 +74,8 @@ public class LineCanvas extends GLCanvas implements GLEventListener {
     
     private void installCameraControls() {
         // fare konumlari kare cizim alanina gore hesaplanir (pencere daha buyuk olabilir)
-        addMouseWheelListener(e -> {
-            boolean zoomIn = e.getWheelRotation() < 0;   // teker yukari -> yakinlas
-            int side = Viewport.side(getWidth(), getHeight());
-            camera.zoom(Viewport.mouseX(e.getX(), getWidth(), getHeight()),
-                        Viewport.mouseY(e.getY(), getWidth(), getHeight()),
-                        side, side, zoomIn);
-        });
-        addMouseListener(new MouseAdapter() {
-            @Override public void mousePressed(MouseEvent e)  { camera.panPress(e.getX(), e.getY()); }
-            @Override public void mouseReleased(MouseEvent e) { camera.panRelease(); }
-        });
-        addMouseMotionListener(new MouseAdapter() {
-            @Override public void mouseDragged(MouseEvent e) {
-                int side = Viewport.side(getWidth(), getHeight());
-                camera.panDrag(e.getX(), e.getY(), side, side);
-            }
-        });
+        new CameraController(this, camera).install();
+
     }
 	@Override
 	public void display(GLAutoDrawable drawable) {

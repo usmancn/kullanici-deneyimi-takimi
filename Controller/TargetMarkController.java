@@ -1,4 +1,4 @@
-package deneme.App;
+package deneme.Controller;
 
 import java.awt.Component;
 import java.awt.event.MouseAdapter;
@@ -23,14 +23,14 @@ import deneme.Simulation.Target;
  * Swing'in varsayilan hafif popup'lari onun altinda kalir ve gorunmez. Bu
  * yuzden popup'lar heavyweight'e zorlanir.
  */
-public final class MarkMenu {
+public final class TargetMarkController {
 
     static {
         JPopupMenu.setDefaultLightWeightPopupEnabled(false);
         ToolTipManager.sharedInstance().setLightWeightPopupEnabled(false);
     }
 
-    private MarkMenu() {}
+    private TargetMarkController() {}
 
     /**
      * Fare olayini dunya koordinatina cevirir (kare grafikte dogrudan, dairesel

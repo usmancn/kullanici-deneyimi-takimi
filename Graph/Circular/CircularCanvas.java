@@ -1,10 +1,6 @@
 package deneme.Graph.Circular;
 
 import java.awt.Font;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.nio.FloatBuffer;
 import java.util.concurrent.BlockingQueue;
 
@@ -17,20 +13,22 @@ import com.jogamp.opengl.awt.GLCanvas;
 import com.jogamp.opengl.util.awt.TextRenderer;
 
 import deneme.App.GainFilterSlider;
-import deneme.App.MarkMenu;
+import deneme.Controller.TargetMarkController;
+import deneme.Controller.CameraController;
 import deneme.GLCore.Camera;
 import deneme.GLCore.Mark;
 import deneme.GLCore.Minimap;
 import deneme.GLCore.Viewport;
 import deneme.MessageProcess.MessageConsumer;
 import deneme.MessageProcess.QueueMessage;
+import deneme.Interfaces.GraphLifecycle;
 
 /**
  * Kutupsal (PPI) radar ekrani: RadarCanvas ile ayni gain -> renk mantigi,
  * ama kare yerine daire. Satir (row) = merkeze uzaklik (menzil), sutun (col) = aci.
  * Scanline merkezden buyuyen bir halka; dis cember beyaz.
  */
-public class CircularCanvas extends GLCanvas implements GLEventListener {
+public class CircularCanvas extends GLCanvas implements GLEventListener, GraphLifecycle {
 
     private static final int SCREEN_RESOLUTION = 1000;
     private static final int CELL_COUNT = SCREEN_RESOLUTION * SCREEN_RESOLUTION;
@@ -50,7 +48,6 @@ public class CircularCanvas extends GLCanvas implements GLEventListener {
     private final Camera camera = new Camera();
     private final Viewport viewport = new Viewport();
     private final Minimap minimap = new Minimap();
-    private volatile boolean minimapDragging = false;
 
     // GPU nesneleri
     private int quadVBO;   // ekrani kaplayan dortgen (x,y,u,v)
@@ -75,54 +72,12 @@ public class CircularCanvas extends GLCanvas implements GLEventListener {
     }
 
     private void installCameraControls() {
-        // fare konumlari kare cizim alanina gore hesaplanir (pencere daha buyuk olabilir)
-        addMouseWheelListener(e -> {
-            boolean zoomIn = e.getWheelRotation() < 0;   // teker yukari -> yakinlas
-            int side = Viewport.side(getWidth(), getHeight());
-            camera.zoom(Viewport.mouseX(e.getX(), getWidth(), getHeight()),
-                        Viewport.mouseY(e.getY(), getWidth(), getHeight()),
-                        side, side, zoomIn);
-        });
-        addMouseListener(new MouseAdapter() {
-            @Override public void mousePressed(MouseEvent e) {
-                requestFocusInWindow();          // TAB tuslarini alabilmek icin
-                if (!javax.swing.SwingUtilities.isLeftMouseButton(e)) return;   // sag tik: menu
-                if (minimap.contains(e.getX(), e.getY(), getWidth(), getHeight())) {
-                    minimapDragging = true;
-                    minimap.navigate(camera, e.getX(), e.getY(), getWidth(), getHeight());
-                    return;
-                }
-                camera.panPress(e.getX(), e.getY());
-            }
-            @Override public void mouseReleased(MouseEvent e) {
-                minimapDragging = false;
-                camera.panRelease();
-            }
-        });
-        addMouseMotionListener(new MouseAdapter() {
-            @Override public void mouseDragged(MouseEvent e) {
-                if (minimapDragging) {           // minimap uzerinde surukleyerek de gezilir
-                    minimap.navigate(camera, e.getX(), e.getY(), getWidth(), getHeight());
-                    return;
-                }
-                int side = Viewport.side(getWidth(), getHeight());
-                camera.panDrag(e.getX(), e.getY(), side, side);
-            }
-        });
-
-        // TAB: minimap ac/kapa (odak gezinme tusu olmaktan cikarilir)
-        setFocusable(true);
-        setFocusTraversalKeysEnabled(false);
-        addKeyListener(new KeyAdapter() {
-            @Override public void keyPressed(KeyEvent e) {
-                if (e.getKeyCode() == KeyEvent.VK_TAB) minimap.toggle();
-            }
-        });
+        new CameraController(this, camera, minimap).install();
     }
 
-    /** Sag tik menusu (mark / change mark / unmark). Main tarafindan baglanir. */
-    public void installMarkMenu(deneme.Simulation.Simulation simulation) {
-        MarkMenu.install(this, simulation, (eventX, eventY) -> {
+    /** Target mark controller'ini bu canvas'a baglar. Main tarafindan cagrilir. */
+    public void installTargetMarkController(deneme.Simulation.Simulation simulation) {
+        TargetMarkController.install(this, simulation, (eventX, eventY) -> {
             int side = Viewport.side(getWidth(), getHeight());
             int localX = eventX - Viewport.offsetX(getWidth(), getHeight());
             int localY = eventY - Viewport.offsetY(getWidth(), getHeight());
@@ -149,8 +104,10 @@ public class CircularCanvas extends GLCanvas implements GLEventListener {
             return new int[] { column, row };
         });
     }
-
+    
+    @Override
     public void startConsuming() { consumer.start(); }
+    @Override
     public void stopConsuming()  { consumer.stop(); }
 
     private class RowConsumer extends MessageConsumer {

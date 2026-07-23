@@ -17,8 +17,9 @@ import deneme.GLCore.ShaderProgram;
 import deneme.GLCore.Viewport;
 import deneme.MessageProcess.MessageConsumer;
 import deneme.MessageProcess.QueueMessage;
+import deneme.Interfaces.GraphLifecycle;
 
-public class WaterfallCanvas extends GLCanvas implements GLEventListener {
+public class WaterfallCanvas extends GLCanvas implements GLEventListener, GraphLifecycle {
 
     private static final int SCREEN_RESOLUTION = 1000;
     private static final int CELL_COUNT = SCREEN_RESOLUTION * SCREEN_RESOLUTION;
@@ -76,7 +77,9 @@ public class WaterfallCanvas extends GLCanvas implements GLEventListener {
         });
     }
 
+    @Override
     public void startConsuming() { consumer.start(); }
+    @Override
     public void stopConsuming()  { consumer.stop(); }
 
     // consumer: satirlari asagi kaydir, en yeniyi uste koy (GL cagirma)
