@@ -14,23 +14,29 @@ public class Simulation implements TargetIdentifier {
 	private final MessagePublisher publisher;
 	private int targetCount;
 	private static final int SCREEN_RESOLUTION = 1000;
-	private static final int FPS = 40;
-	
+	public static final int DEFAULT_FPS = 40;
+
+	private final int fps;
+
 	private Target[] targets;
-	
+
 	private int currentRowIndex = 0;
 	private ScheduledExecutorService scheduler;
 	public Simulation(int targetCount, MessagePublisher publisher) {
+		this(targetCount, publisher, DEFAULT_FPS);
+	}
+	public Simulation(int targetCount, MessagePublisher publisher, int fps) {
 		this.publisher = publisher;
+		this.fps = (fps > 0) ? fps : DEFAULT_FPS;
 		initializeData();
 		placeTarget(targetCount);
-		
+
 	}
 	public void start() {
 		sendLoop();
 	}
 	public void sendLoop() {
-		int period = 1000 / FPS;
+		int period = 1000 / fps;
 
 		this.scheduler = Executors.newSingleThreadScheduledExecutor();
 		scheduler.scheduleAtFixedRate(

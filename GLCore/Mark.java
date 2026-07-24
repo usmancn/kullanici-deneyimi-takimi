@@ -5,20 +5,19 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
-import com.jogamp.opengl.util.awt.TextRenderer;
 
 /**
  * Tanimli (ID'li) hedef isaretleri icin tek sinifta toplanmis kayit + cizim.
  *
  * <p>Dedektor bir objeyi tanimlayinca (ID'si varsa) {@link #register} ile buraya
  * yazar; ayni hedef her taramada ayni ID ile guncellenir (tekrar birikmez).
- * Square ve Circular canvas'lar her karede {@link #draw} ile tum marklarin
- * etrafina cember cizip ustune ID yazar. Konum donusumu (kare / polar) disaridan
- * {@link Mapper} ile verilir.
+ * Square ve Circular canvas'lar her karede {@link #draw} ile isaretli marklarin
+ * etrafina {@link MarkStyle} ile secilen sekli (kare / daire / ucgen) cizer.
+ * Konum donusumu (kare / polar) disaridan {@link Mapper} ile verilir.
+ * ID etiketleri ayri bir ozelliktir, {@link IDLabel} cizer.
  *
- * <p>Cizim: cember sabit-fonksiyon (immediate mode), ID metni dunya-uzayinda
- * {@link TextRenderer} ile (zoom ile olceklenir). TextRenderer bir GL context'e
- * bagli oldugundan her canvas kendi ornegini verir.
+ * <p>Cizim sabit-fonksiyon (immediate mode) ile dunya-uzayinda yapilir
+ * (zoom ile olceklenir).
  */
 public final class Mark {
 
@@ -28,7 +27,6 @@ public final class Mark {
     }
 
     private static final int CIRCLE_SEGMENTS = 48;
-    private static final int TEXT_MARGIN_PX = 4;   // ID ile cember arasi bosluk (piksel)
 
     /** ID -> mark (thread-safe). ID anahtar oldugu icin ayni hedef tekrar birikmez. */
     private static final ConcurrentHashMap<String, Mark> MARKS = new ConcurrentHashMap<>();
@@ -106,77 +104,78 @@ public final class Mark {
     }
 
     /**
-     * Tespit edilen tum hedeflerin ustune ID'sini yazar (ekran-uzayi, sabit
-     * boyut - kararli, buyume yok); sadece <b>isaretli</b> olanlarin etrafina
-     * ayrica sari cember (dunya-uzayi, zoom ile olceklenir) cizer.
+     * <b>Isaretli</b> hedeflerin etrafina {@link MarkStyle} ile secilen sekli
+     * (kare / daire / ucgen, dunya-uzayi, zoom ile olceklenir) cizer.
      *
      * <p>Gain filtresi disinda kalan hedeflerin mark'i cizilmez (kayit silinmez,
      * hedef araliga geri girdiginde tekrar gorunur) - boylece ekrandaki gain
      * gorseli ile isaretler tutarli kalir.
      *
-     * @param width/height drawable piksel boyutu (ID'yi piksele projekte etmek icin)
-     * @param radius       cember yaricapi (dunya birimi)
+     * @param style               sekil tipi + boyut + renk (MarkBuilder uretir)
      * @param filterMin/filterMax gain filtresi araligi (shader ile ayni)
      */
-    public static void draw(GL2 gl, TextRenderer text, float[] matrix,
-                            int width, int height, float radius,
+    public static void draw(GL2 gl, float[] matrix, MarkStyle style,
                             float filterMin, float filterMax, Mapper mapper) {
         if (MARKS.isEmpty()) return;
 
-        // sadece gain'i filtre araliginda olanlar
+        // sadece gain'i filtre araliginda ve isaretli olanlar
         Collection<Mark> marks = new java.util.ArrayList<>();
         for (Mark mark : MARKS.values()) {
-            if (mark.gain >= filterMin && mark.gain <= filterMax) {
+            if (mark.marked && mark.gain >= filterMin && mark.gain <= filterMax) {
                 marks.add(mark);
             }
         }
         if (marks.isEmpty()) return;
 
-        // ---- cemberler (sari) : dunya-uzayi, kamera matrisi projeksiyonda ----
+        // ---- sekiller: dunya-uzayi, kamera matrisi projeksiyonda ----
         gl.glUseProgram(0);
-        // shader'dan kalan aktif vertex-attribute dizileri TextRenderer'i bozar -> kapat (bkz. LabelLayer)
+        // shader'dan kalan aktif vertex-attribute dizileri sabit-fonksiyonu bozar -> kapat
         for (int i = 0; i < 8; i++) {
             gl.glDisableVertexAttribArray(i);
         }
+        gl.glBindBuffer(GL.GL_ARRAY_BUFFER, 0);
         gl.glDisable(GL.GL_TEXTURE_2D);
         gl.glMatrixMode(GL2.GL_PROJECTION);
         gl.glLoadMatrixf(matrix, 0);
         gl.glMatrixMode(GL2.GL_MODELVIEW);
         gl.glLoadIdentity();
 
-        gl.glColor3f(1f, 1f, 0f);
+        java.awt.Color color = style.getColor();
+        float radius = style.getSize();
+        gl.glColor3f(color.getRed() / 255f, color.getGreen() / 255f, color.getBlue() / 255f);
         gl.glLineWidth(2f);
         for (Mark mark : marks) {
-            if (!mark.marked) continue;      // isaretlenmemis hedefte sadece ID yazisi olur
             float[] p = mapper.world(mark);
-            gl.glBegin(GL.GL_LINE_LOOP);
-            for (int k = 0; k < CIRCLE_SEGMENTS; k++) {
-                double a = 2.0 * Math.PI * k / CIRCLE_SEGMENTS;
-                gl.glVertex2f(p[0] + radius * (float) Math.cos(a),
-                              p[1] + radius * (float) Math.sin(a));
-            }
-            gl.glEnd();
+            drawShape(gl, style.getType(), p[0], p[1], radius);
         }
         gl.glLineWidth(1f);
+    }
 
-        // ---- ID metinleri : ekran-uzayi, hedefin uzerinde (dunya -> piksel) ----
-        // cemberin dikey yaricapinin piksel karsiligi: matrix[5] = 2/rangeY, ndc->px = height/2
-        text.beginRendering(width, height);
-        text.setColor(1f, 1f, 1f, 1f);
-        for (Mark mark : marks) {
-            float[] p = mapper.world(mark);
-            float clipX = matrix[0] * p[0] + matrix[4] * p[1] + matrix[12];
-            float clipY = matrix[1] * p[0] + matrix[5] * p[1] + matrix[13];
-            float clipW = matrix[3] * p[0] + matrix[7] * p[1] + matrix[15];
-            if (clipW == 0f) continue;
-            int pixelX = Math.round((clipX / clipW * 0.5f + 0.5f) * width);
-            int pixelY = Math.round((clipY / clipW * 0.5f + 0.5f) * height);
-
-            // cemberin ust kenarini piksel olarak bul -> etiketi hemen ustune, yatayda ortali koy
-            int radiusPx = Math.round(radius * Math.abs(matrix[5]) * height * 0.5f);
-            int textWidth = Math.round((float) text.getBounds(mark.id).getWidth());
-            text.draw(mark.id, pixelX - textWidth / 2, pixelY + radiusPx + TEXT_MARGIN_PX);
+    /** Secilen tipe gore merkezi (x,y) olan sekli LINE_LOOP ile cizer. */
+    private static void drawShape(GL2 gl, MarkType type, float x, float y, float radius) {
+        gl.glBegin(GL.GL_LINE_LOOP);
+        switch (type) {
+            case SQUARE:
+                gl.glVertex2f(x - radius, y - radius);
+                gl.glVertex2f(x + radius, y - radius);
+                gl.glVertex2f(x + radius, y + radius);
+                gl.glVertex2f(x - radius, y + radius);
+                break;
+            case TRIANGLE:
+                // tepe yukarida esit kenar ucgen
+                gl.glVertex2f(x, y + radius);
+                gl.glVertex2f(x - radius * 0.866f, y - radius * 0.5f);
+                gl.glVertex2f(x + radius * 0.866f, y - radius * 0.5f);
+                break;
+            case CIRCLE:
+            default:
+                for (int k = 0; k < CIRCLE_SEGMENTS; k++) {
+                    double a = 2.0 * Math.PI * k / CIRCLE_SEGMENTS;
+                    gl.glVertex2f(x + radius * (float) Math.cos(a),
+                                  y + radius * (float) Math.sin(a));
+                }
+                break;
         }
-        text.endRendering();
+        gl.glEnd();
     }
 }

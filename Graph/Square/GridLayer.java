@@ -21,8 +21,8 @@ import deneme.GLCore.Camera;
  */
 public final class GridLayer {
 
-    /** Grid cizgilerinin ekrandaki oransal konumlari. Zoom'dan bagimsiz, sabit. */
-    private static final float[] GRID_FRACTIONS = { 0f, 0.25f, 0.5f, 0.75f, 1f };
+    /** Eksen basina default cizgi sayisi (kenarlar dahil) -> 0, 1/4, 1/2, 3/4, 1. */
+    public static final int DEFAULT_LINE_COUNT = 5;
 
     private static final int FONT_SIZE = 14;
     private static final int PADDING = 6;
@@ -31,9 +31,27 @@ public final class GridLayer {
     private static final int Y_MIN_BASELINE = 26;
 
     // soluk gri: veriyi bastirmaz ama okunur
-    private static final float LINE_GRAY = 0.45f;
+    private static final java.awt.Color DEFAULT_LINE_COLOR = new java.awt.Color(115, 115, 115);
+
+    // ---- GridSquareBuilder ile ayarlanan ozellikler (hepsinin default'u var) ----
+    private float[] xFractions = fractions(DEFAULT_LINE_COUNT);   // dikey cizgiler
+    private float[] yFractions = fractions(DEFAULT_LINE_COUNT);   // yatay cizgiler
+    private java.awt.Color lineColor = DEFAULT_LINE_COLOR;
 
     private TextRenderer text;
+
+    public void setXLineCount(int count) { if (count >= 2) this.xFractions = fractions(count); }
+    public void setYLineCount(int count) { if (count >= 2) this.yFractions = fractions(count); }
+    public void setLineColor(java.awt.Color color) { if (color != null) this.lineColor = color; }
+
+    /** count cizgiyi (kenarlar dahil) 0..1 araligina esit dagitir. */
+    private static float[] fractions(int count) {
+        float[] result = new float[count];
+        for (int i = 0; i < count; i++) {
+            result[i] = i / (float) (count - 1);
+        }
+        return result;
+    }
 
     public void init(GL2 gl) {
         text = new TextRenderer(new Font("SansSerif", Font.BOLD, FONT_SIZE), true, true);
@@ -62,13 +80,16 @@ public final class GridLayer {
         gl.glMatrixMode(GL2.GL_MODELVIEW);
         gl.glLoadIdentity();
 
-        gl.glColor3f(LINE_GRAY, LINE_GRAY, LINE_GRAY);
+        gl.glColor3f(lineColor.getRed() / 255f, lineColor.getGreen() / 255f,
+                     lineColor.getBlue() / 255f);
         gl.glLineWidth(1f);
         gl.glBegin(GL.GL_LINES);
-        for (float fraction : GRID_FRACTIONS) {
+        for (float fraction : xFractions) {
             float worldX = minX + fraction * (maxX - minX);
-            float worldY = minY + fraction * (maxY - minY);
             gl.glVertex2f(worldX, minY);   gl.glVertex2f(worldX, maxY);   // dikey
+        }
+        for (float fraction : yFractions) {
+            float worldY = minY + fraction * (maxY - minY);
             gl.glVertex2f(minX, worldY);   gl.glVertex2f(maxX, worldY);   // yatay
         }
         gl.glEnd();
@@ -78,8 +99,8 @@ public final class GridLayer {
         text.setColor(1f, 1f, 1f, 1f);
 
         // X ekseni: X koordinati etiketleri (en altta)
-        for (int i = 0; i < GRID_FRACTIONS.length; i++) {
-            float fraction = GRID_FRACTIONS[i];
+        for (int i = 0; i < xFractions.length; i++) {
+            float fraction = xFractions[i];
             float worldX = minX + fraction * (maxX - minX);
             String xText = formatLabel(worldX);
 
@@ -92,10 +113,10 @@ public final class GridLayer {
         }
 
         // Y ekseni: menzil etiketleri
-        for (int i = 0; i < GRID_FRACTIONS.length; i++) {
+        for (int i = 0; i < yFractions.length; i++) {
             if (i == 0) continue;   // orijin (0) X ekseninde zaten cizildi
 
-            float fraction = GRID_FRACTIONS[i];
+            float fraction = yFractions[i];
             float worldY = minY + fraction * (maxY - minY);
             String yText = formatLabel(worldY);
 

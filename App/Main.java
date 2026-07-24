@@ -1,44 +1,20 @@
 package deneme.App;
 
-import java.awt.BorderLayout;
-import java.awt.CardLayout;
-import java.awt.Dimension;
-import java.awt.GridLayout;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-
-import javax.swing.ButtonGroup;
-import javax.swing.JFrame;
-import javax.swing.JMenu;
-import javax.swing.JMenuBar;
 import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JRadioButtonMenuItem;
 import javax.swing.SwingUtilities;
 
-import com.jogamp.opengl.GLCapabilities;
-import com.jogamp.opengl.GLProfile;
-import com.jogamp.opengl.util.FPSAnimator;
-
-import deneme.Detection.ObjectDetector;
-import deneme.Graph.Circular.CircularCanvas;
-import deneme.Graph.Line.LineCanvas;
-import deneme.Graph.Square.SquareCanvas;
-import deneme.Graph.Waterfall.WaterfallCanvas;
-import deneme.MessageProcess.MessagePublisher;
-import deneme.MessageProcess.QueueMessage;
-import deneme.Simulation.Simulation;
+import deneme.Builder.AppBuilder;
+import deneme.Builder.CircularCanvasBuilder;
+import deneme.Builder.GainSliderBuilder;
+import deneme.Builder.LineCanvasBuilder;
+import deneme.Builder.SimulationBuilder;
+import deneme.Builder.SquareCanvasBuilder;
+import deneme.Builder.WaterfallCanvasBuilder;
 
 public class Main {
 
     private static final int FPS = 40;
     private static final int DEFAULT_TARGET_COUNT = 15;
-
-    private static final String CARD_SQUARE = "square";
-    private static final String CARD_LINE = "line";
-    private static final String CARD_CIRCULAR = "circular";
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(Main::start);
@@ -51,105 +27,23 @@ public class Main {
             return; // kullanici iptal etti
         }
 
-        // ---- 2) mesaj hatti: Simulation -> (square queue, waterfall queue) ----
-        BlockingQueue<QueueMessage> squareQueue = new LinkedBlockingQueue<>();
-        BlockingQueue<QueueMessage> waterfallQueue = new LinkedBlockingQueue<>();
-        BlockingQueue<QueueMessage> lineQueue = new LinkedBlockingQueue<>();
-        BlockingQueue<QueueMessage> circularQueue = new LinkedBlockingQueue<>();
-        BlockingQueue<QueueMessage> detectionQueue = new LinkedBlockingQueue<>();
+        // ---- 2) tum uygulama builder uzerinden kurulur ----
+        RadarApp app = new AppBuilder()
+                .title("Radar - Square / Waterfall")
+                .simulation(new SimulationBuilder()
+                        .FPS(FPS)
+                        .EnemyCount(targetCount))
+                .addSquareCanvas(new SquareCanvasBuilder())
+                .addLineCanvas(new LineCanvasBuilder())
+                .addWaterfallCanvas(new WaterfallCanvasBuilder())
+                .addCircularCanvas(new CircularCanvasBuilder())
+                .gainSlider(new GainSliderBuilder())
+                .gainSliderPosition(SliderPosition.BOTTOM)
+                .animatorFps(FPS)
+                .build();
 
-        MessagePublisher publisher = new MessagePublisher();
-        publisher.subscribe(squareQueue);
-        publisher.subscribe(waterfallQueue);
-        publisher.subscribe(lineQueue);
-        publisher.subscribe(circularQueue);
-        publisher.subscribe(detectionQueue);
-
-        Simulation simulation = new Simulation(targetCount, publisher);
-
-        // scanline tabanli obje dedektoru: obje bulunca Simulation'a ID sorar
-        ObjectDetector detector = new ObjectDetector(detectionQueue, simulation);
-
-        // heavyweight popup: GLCanvas uzerinde hafif popup'lar gorunmez
-        javax.swing.JPopupMenu.setDefaultLightWeightPopupEnabled(false);
-
-        // ---- 3) iki OpenGL canvas ----
-        GLProfile profile = GLProfile.get(GLProfile.GL2);
-        GLCapabilities caps = new GLCapabilities(profile);
-
-        SquareCanvas squareCanvas = new SquareCanvas(caps, squareQueue);
-        WaterfallCanvas waterfallCanvas = new WaterfallCanvas(caps, waterfallQueue);
-        LineCanvas lineCanvas = new LineCanvas(caps, lineQueue);
-        CircularCanvas circularCanvas = new CircularCanvas(caps, circularQueue);
-
-        // sag tik menusu: mark / change mark / unmark
-        squareCanvas.installMarkMenu(simulation);
-        circularCanvas.installMarkMenu(simulation);
-
-        // line + waterfall tek kartta, alt alta: her biri 1000x500 yarida durur,
-        // Viewport kisa kenara gore kare aldigi icin ikisi de 500x500 cizer
-        JPanel lineWaterfall = new JPanel(new GridLayout(2, 1));
-        lineWaterfall.add(lineCanvas);        // ustte line
-        lineWaterfall.add(waterfallCanvas);   // altta waterfall
-
-        // ---- 4) CardLayout ile ikisini ust uste koy, menuden sec ----
-        CardLayout cards = new CardLayout();
-        JPanel center = new JPanel(cards);
-        center.setPreferredSize(new Dimension(1000, 1000));
-        center.add(squareCanvas, CARD_SQUARE);
-        center.add(lineWaterfall, CARD_LINE);
-        center.add(circularCanvas, CARD_CIRCULAR);
-
-        GainFilterSlider gainSlider = new GainFilterSlider();
-
-        JFrame frame = new JFrame("Radar - Square / Waterfall");
-        frame.setJMenuBar(buildMenuBar(cards, center, gainSlider));
-        frame.getContentPane().add(center, BorderLayout.CENTER);
-        frame.getContentPane().add(gainSlider, BorderLayout.SOUTH);
-        frame.pack();
-        frame.setLocationRelativeTo(null);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
-        FPSAnimator squareAnim = new FPSAnimator(squareCanvas, FPS, true);
-        FPSAnimator waterfallAnim = new FPSAnimator(waterfallCanvas, FPS, true);
-        FPSAnimator lineAnim = new FPSAnimator(lineCanvas, FPS, true);
-        FPSAnimator circularAnim = new FPSAnimator(circularCanvas, FPS, true);
-
-        // ---- 5) kapatirken duzgun durdur ----
-        frame.addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosing(WindowEvent e) {
-                new Thread(() -> {
-                    simulation.stop();
-                    squareCanvas.stopConsuming();
-                    waterfallCanvas.stopConsuming();
-                    lineCanvas.stopConsuming();
-                    circularCanvas.stopConsuming();
-                    detector.stop();
-                    squareAnim.stop();
-                    waterfallAnim.stop();
-                    lineAnim.stop();
-                    circularAnim.stop();
-                }).start();
-            }
-        });
-
-        frame.setVisible(true);
-        cards.show(center, CARD_SQUARE); // acilista square
-        cards.show(center, CARD_SQUARE);   // acilista square
-        squareCanvas.requestFocusInWindow();   // TAB (minimap) icin odak canvas'ta olsun
-
-        // ---- 6) her sey calissin ----
-        squareAnim.start();
-        waterfallAnim.start();
-        lineAnim.start();
-        circularAnim.start();
-        squareCanvas.startConsuming();
-        waterfallCanvas.startConsuming();
-        lineCanvas.startConsuming();
-        circularCanvas.startConsuming();
-        detector.start();
-        simulation.start();
+        // ---- 3) pencereyi ac, her sey calissin ----
+        app.start();
     }
 
     // hedef sayisini soran ufak baslangic ekrani
@@ -168,40 +62,5 @@ public class Main {
         } catch (NumberFormatException ex) {
             return DEFAULT_TARGET_COUNT; // gecersiz giris -> varsayilan
         }
-    }
-
-    // secilen kart gorunur olunca odagi ona ver (TAB ile minimap ac/kapa icin)
-    private static void focusCard(JPanel center) {
-        for (java.awt.Component c : center.getComponents()) {
-            if (c.isVisible()) {
-                c.requestFocusInWindow();
-                return;
-            }
-        }
-    }
-
-    // ustte Square / Waterfall secim menusu
-    private static JMenuBar buildMenuBar(CardLayout cards, JPanel center, GainFilterSlider gainSlider) {
-        JMenuBar bar = new JMenuBar();
-        JMenu menu = new JMenu("Grafik");
-
-        JRadioButtonMenuItem square = new JRadioButtonMenuItem("Square", true);
-        JRadioButtonMenuItem line = new JRadioButtonMenuItem("Line + Waterfall");
-        JRadioButtonMenuItem circular = new JRadioButtonMenuItem("Circular");
-
-        ButtonGroup group = new ButtonGroup();
-        group.add(square);
-        group.add(line);
-        group.add(circular);
-
-        square.addActionListener(e    -> { cards.show(center, CARD_SQUARE);   gainSlider.setVisible(true); focusCard(center); });
-        line.addActionListener(e      -> { cards.show(center, CARD_LINE);     gainSlider.setVisible(true); focusCard(center); });
-        circular.addActionListener(e  -> { cards.show(center, CARD_CIRCULAR); gainSlider.setVisible(true); focusCard(center); });
-
-        menu.add(square);
-        menu.add(line);
-        menu.add(circular);
-        bar.add(menu);
-        return bar;
     }
 }

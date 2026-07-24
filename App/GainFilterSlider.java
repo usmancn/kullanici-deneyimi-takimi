@@ -6,8 +6,6 @@ import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.swing.JComponent;
@@ -28,16 +26,29 @@ public class GainFilterSlider extends JComponent {
     private static final int SLIDER_MIN = 0;
     private static final int SLIDER_MAX = 100;
 
-    // --- Koyu/mavi tema renkleri ---
-    private static final Color BG           = new Color(14, 14, 20);
-    private static final Color TRACK_BG     = new Color(40, 44, 60);
-    private static final Color TRACK_RANGE  = new Color(80, 160, 255);
-    private static final Color THUMB        = new Color(230, 240, 255);
-    private static final Color THUMB_BORDER = new Color(80, 160, 255);
-    private static final Color TICK         = new Color(90, 96, 120);
-    private static final Color LABEL        = new Color(150, 160, 185);
-    private static final Color TITLE_COLOR  = new Color(180, 190, 215);
-    private static final Color VALUE_COLOR  = new Color(120, 190, 255);
+    // --- Koyu/mavi tema default renkleri ---
+    private static final Color DEFAULT_BG           = new Color(14, 14, 20);
+    private static final Color DEFAULT_TRACK_BG     = new Color(40, 44, 60);
+    private static final Color DEFAULT_TRACK_RANGE  = new Color(80, 160, 255);
+    private static final Color DEFAULT_THUMB        = new Color(230, 240, 255);
+    private static final Color DEFAULT_THUMB_BORDER = new Color(80, 160, 255);
+    private static final Color DEFAULT_TICK         = new Color(90, 96, 120);
+    private static final Color DEFAULT_LABEL        = new Color(150, 160, 185);
+    private static final Color DEFAULT_TITLE_COLOR  = new Color(180, 190, 215);
+    private static final Color DEFAULT_VALUE_COLOR  = new Color(120, 190, 255);
+
+    // ---- GainSliderBuilder ile ayarlanan ozellikler (hepsinin default'u var) ----
+    private Color bg          = DEFAULT_BG;
+    private Color trackBg     = DEFAULT_TRACK_BG;
+    private Color trackRange  = DEFAULT_TRACK_RANGE;
+    private Color thumb       = DEFAULT_THUMB;
+    private Color thumbBorder = DEFAULT_THUMB_BORDER;
+    private Color tick        = DEFAULT_TICK;
+    private Color label       = DEFAULT_LABEL;
+    private Color titleColor  = DEFAULT_TITLE_COLOR;
+    private Color valueColor  = DEFAULT_VALUE_COLOR;
+    private boolean hasTitle = true;         // "Gain Filtresi" basligi
+    private boolean hasSecondTitle = true;   // "Gorunen aralik ..." satiri
 
     /** Global filtre araligi (0..1). Canvas'lar buradan okur. */
     private static volatile float gFilterMin = 0f;
@@ -50,51 +61,18 @@ public class GainFilterSlider extends JComponent {
     private final int max = SLIDER_MAX;
     private int low;
     private int high;
-    private boolean draggingLow = false;
-    private boolean draggingHigh = false;
 
+    /**
+     * Fare kontrolu artik slider'in icinde degil:
+     * {@link deneme.Controller.GainFilterController} install() ile baglar.
+     */
     public GainFilterSlider() {
         this.low  = toSlider(gFilterMin);
         this.high = toSlider(gFilterMax);
 
         setOpaque(true);
-        setBackground(BG);
+        setBackground(bg);
         setPreferredSize(new Dimension(280, 74));
-
-        MouseAdapter mouseAdapter = new MouseAdapter() {
-            @Override
-            public void mousePressed(MouseEvent e) {
-                int x = e.getX();
-                int lowX  = getXForValue(low);
-                int highX = getXForValue(high);
-                if (Math.abs(x - lowX) < 12 && x <= highX) {
-                    draggingLow = true;
-                } else if (Math.abs(x - highX) < 12) {
-                    draggingHigh = true;
-                } else if (x < lowX) {
-                    setLowValue(getValueForX(x));
-                    draggingLow = true;
-                } else if (x > highX) {
-                    setHighValue(getValueForX(x));
-                    draggingHigh = true;
-                }
-            }
-
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                draggingLow = false;
-                draggingHigh = false;
-            }
-
-            @Override
-            public void mouseDragged(MouseEvent e) {
-                int val = getValueForX(e.getX());
-                if (draggingLow)       setLowValue(val);
-                else if (draggingHigh) setHighValue(val);
-            }
-        };
-        addMouseListener(mouseAdapter);
-        addMouseMotionListener(mouseAdapter);
 
         INSTANCES.add(this);
     }
@@ -103,12 +81,40 @@ public class GainFilterSlider extends JComponent {
     public static float filterMin() { return gFilterMin; }
     public static float filterMax() { return gFilterMax; }
 
-    private void setLowValue(int l) {
+    // ---- builder erisimi ----
+    public void setBackgroundColor(Color c)      { if (c != null) { this.bg = c; setBackground(c); } }
+    public void setTrackBackgroundColor(Color c) { if (c != null) this.trackBg = c; }
+    public void setTrackRangeColor(Color c)      { if (c != null) this.trackRange = c; }
+    public void setThumbColor(Color c)           { if (c != null) this.thumb = c; }
+    public void setThumbBorderColor(Color c)     { if (c != null) this.thumbBorder = c; }
+    public void setTickColor(Color c)            { if (c != null) this.tick = c; }
+    public void setLabelColor(Color c)           { if (c != null) this.label = c; }
+    public void setTitleColor(Color c)           { if (c != null) this.titleColor = c; }
+    public void setValueColor(Color c)           { if (c != null) this.valueColor = c; }
+    public void setHasTitle(boolean hasTitle)            { this.hasTitle = hasTitle; }
+    public void setHasSecondTitle(boolean hasSecondTitle) { this.hasSecondTitle = hasSecondTitle; }
+
+    /** AppBuilder'in gainSliderSize secimi. */
+    public void setSliderSize(int width, int height) {
+        if (width > 0 && height > 0) setPreferredSize(new Dimension(width, height));
+    }
+
+    // ---- GainFilterController erisimi ----
+    /** Alt tutamagin ekran x konumu. */
+    public int lowThumbX()  { return getXForValue(low); }
+
+    /** Ust tutamagin ekran x konumu. */
+    public int highThumbX() { return getXForValue(high); }
+
+    /** Ekran x konumunun karsilik geldigi slider degeri. */
+    public int valueForX(int x) { return getValueForX(x); }
+
+    public void setLowValue(int l) {
         this.low = Math.max(min, Math.min(l, high));
         applyAndSync();
     }
 
-    private void setHighValue(int h) {
+    public void setHighValue(int h) {
         this.high = Math.min(max, Math.max(h, low));
         applyAndSync();
     }
@@ -150,47 +156,51 @@ public class GainFilterSlider extends JComponent {
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
         // arka plan
-        g2.setColor(BG);
+        g2.setColor(bg);
         g2.fillRect(0, 0, getWidth(), getHeight());
 
-        // baslik + deger
-        g2.setColor(TITLE_COLOR);
-        g2.setFont(getFont().deriveFont(Font.BOLD, 12f));
-        g2.drawString("Gain Filtresi", 12, 16);
+        // baslik + deger (builder ile kapatilabilir)
+        if (hasTitle) {
+            g2.setColor(titleColor);
+            g2.setFont(getFont().deriveFont(Font.BOLD, 12f));
+            g2.drawString("Gain Filtresi", 12, 16);
+        }
 
-        g2.setColor(VALUE_COLOR);
-        g2.setFont(getFont().deriveFont(11f));
-        g2.drawString(String.format("Gorunen aralik: %.2f  -  %.2f", low / 100f, high / 100f), 12, 32);
+        if (hasSecondTitle) {
+            g2.setColor(valueColor);
+            g2.setFont(getFont().deriveFont(11f));
+            g2.drawString(String.format("Gorunen aralik: %.2f  -  %.2f", low / 100f, high / 100f), 12, 32);
+        }
 
         int y = 48;   // track ekseni
         int lowX = getXForValue(low);
         int highX = getXForValue(high);
 
         // track arka plani
-        g2.setColor(TRACK_BG);
+        g2.setColor(trackBg);
         g2.fillRoundRect(12, y - 2, getWidth() - 24, 4, 4, 4);
 
         // secili aralik
-        g2.setColor(TRACK_RANGE);
+        g2.setColor(trackRange);
         g2.fillRoundRect(lowX, y - 2, highX - lowX, 4, 4, 4);
 
         // tick + etiketler
         g2.setFont(getFont().deriveFont(10f));
         for (int i = 0; i <= 100; i += 25) {
             int tx = getXForValue(i);
-            g2.setColor(TICK);
+            g2.setColor(tick);
             g2.drawLine(tx, y + 4, tx, y + 8);
-            g2.setColor(LABEL);
+            g2.setColor(label);
             String text = (i == 0 || i == 100) ? String.format("%.1f", i / 100f) : String.format("%.2f", i / 100f);
             int textWidth = g2.getFontMetrics().stringWidth(text);
             g2.drawString(text, tx - textWidth / 2, y + 22);
         }
 
         // tutamaklar
-        g2.setColor(THUMB);
+        g2.setColor(thumb);
         g2.fillOval(lowX - 6, y - 6, 12, 12);
         g2.fillOval(highX - 6, y - 6, 12, 12);
-        g2.setColor(THUMB_BORDER);
+        g2.setColor(thumbBorder);
         g2.drawOval(lowX - 6, y - 6, 12, 12);
         g2.drawOval(highX - 6, y - 6, 12, 12);
 

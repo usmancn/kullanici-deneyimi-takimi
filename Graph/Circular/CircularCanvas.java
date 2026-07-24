@@ -1,10 +1,6 @@
 package deneme.Graph.Circular;
 
-import java.awt.Font;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import java.awt.Color;
 import java.nio.FloatBuffer;
 import java.util.concurrent.BlockingQueue;
 
@@ -14,115 +10,121 @@ import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.GLCapabilities;
 import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.awt.GLCanvas;
-import com.jogamp.opengl.util.awt.TextRenderer;
 
 import deneme.App.GainFilterSlider;
-import deneme.App.MarkMenu;
+import deneme.App.MarkMenuStyle;
+import deneme.Controller.CameraController;
+import deneme.Controller.TargetMarkController;
 import deneme.GLCore.Camera;
+import deneme.GLCore.IDLabel;
 import deneme.GLCore.Mark;
+import deneme.GLCore.MarkStyle;
 import deneme.GLCore.Minimap;
 import deneme.GLCore.Viewport;
+import deneme.Graph.IRadarCanvas;
 import deneme.MessageProcess.MessageConsumer;
 import deneme.MessageProcess.QueueMessage;
 
 /**
- * Kutupsal (PPI) radar ekrani: RadarCanvas ile ayni gain -> renk mantigi,
+ * Kutupsal (PPI) radar ekrani: SquareCanvas ile ayni gain -> renk mantigi,
  * ama kare yerine daire. Satir (row) = merkeze uzaklik (menzil), sutun (col) = aci.
  * Scanline merkezden buyuyen bir halka; dis cember beyaz.
  */
-public class CircularCanvas extends GLCanvas implements GLEventListener {
+public class CircularCanvas extends GLCanvas implements GLEventListener, IRadarCanvas {
 
-    private static final int SCREEN_RESOLUTION = 1000;
-    private static final int CELL_COUNT = SCREEN_RESOLUTION * SCREEN_RESOLUTION;
-    private static final float CENTER = SCREEN_RESOLUTION / 2f;        // 500
-    private static final float MAX_RADIUS = SCREEN_RESOLUTION * 0.5f;  // 500 -> ic teget cember
-    private static final int RING_SEGMENTS = 360;                      // scan halkasi / dis cember cozunurlugu
+    private static final long serialVersionUID = 1L;
+
+    public static final int DEFAULT_RESOLUTION = 1000;
+
+    /** Dunya boyu sabittir (kamera/simulasyon ile ortak); resolution sadece veri gridini etkiler. */
+    private static final float WORLD_SIZE = Camera.WORLD_SIZE;
+    private static final float CENTER = WORLD_SIZE / 2f;        // 500
+    private static final float MAX_RADIUS = WORLD_SIZE * 0.5f;  // 500 -> ic teget cember
+    private static final int RIM_SEGMENTS = 360;                // dis cember cozunurlugu
+
+    private final int resolution;
+    private final int cellCount;
 
     // consumer thread'inin yazdigi, GL thread'inin okudugu paylasilan veri
-    private final double[][] image = new double[SCREEN_RESOLUTION][SCREEN_RESOLUTION];
+    private final double[][] image;
     private volatile int scanRowIndex = 0;
 
     private final ShaderProgram shader = new ShaderProgram();
-    private final GridLayer grid = new GridLayer();
-    private TextRenderer text;
     private final RowConsumer consumer;
 
     private final Camera camera = new Camera();
     private final Viewport viewport = new Viewport();
-    private final Minimap minimap = new Minimap();
-    private volatile boolean minimapDragging = false;
+
+    // ---- CircularCanvasBuilder ile ayarlanan ozellikler (hepsinin default'u var) ----
+    private Color background = Color.BLACK;            // cember disi alan
+    private Color firstColor = null;    // null: shader default'u
+    private Color lastColor = null;     // null: shader default'u
+    private GridLayer grid = new GridLayer();          // null: grid yok
+    private ScanLine scanLine = new ScanLine();        // null: scanline yok
+    private MarkStyle markStyle = defaultMarkStyle();  // null: mark (ve mark menusu) yok
+    private IDLabel idLabel = new IDLabel();           // null: ID etiketi yok
+    private Minimap minimap = new Minimap();           // null: minimap yok
+    private MarkMenuStyle markMenuStyle = new MarkMenuStyle();
 
     // GPU nesneleri
     private int quadVBO;   // ekrani kaplayan dortgen (x,y,u,v)
-    private int gainTex;   // gain grid'i (SIZE x SIZE texture)
-    private int scanVBO;   // merkezden buyuyen scan halkasi
-    private int rimVBO;    // sabit beyaz dis cember
+    private int gainTex;   // gain grid'i (resolution x resolution texture)
 
     // her karede yeniden doldurulan CPU tarafi diziler
-    private final float[] gainData = new float[CELL_COUNT];
-    private final float[] scanData = new float[RING_SEGMENTS * 2];
+    private final float[] gainData;
     private final float[] matrix   = new float[16];
     private final float[] miniMatrix = new float[16];   // minimap: tum dunya
 
-    private int viewWidth = SCREEN_RESOLUTION;
-    private int viewHeight = SCREEN_RESOLUTION;
+    private int viewWidth = DEFAULT_RESOLUTION;
+    private int viewHeight = DEFAULT_RESOLUTION;
 
     public CircularCanvas(GLCapabilities caps, BlockingQueue<QueueMessage> queue) {
+        this(caps, queue, DEFAULT_RESOLUTION);
+    }
+
+    public CircularCanvas(GLCapabilities caps, BlockingQueue<QueueMessage> queue, int resolution) {
         super(caps);
+        this.resolution = resolution;
+        this.cellCount = resolution * resolution;
+        this.image = new double[resolution][resolution];
+        this.gainData = new float[cellCount];
         this.consumer = new RowConsumer(queue);
         addGLEventListener(this);
-        installCameraControls();
     }
 
-    private void installCameraControls() {
-        // fare konumlari kare cizim alanina gore hesaplanir (pencere daha buyuk olabilir)
-        addMouseWheelListener(e -> {
-            boolean zoomIn = e.getWheelRotation() < 0;   // teker yukari -> yakinlas
-            int side = Viewport.side(getWidth(), getHeight());
-            camera.zoom(Viewport.mouseX(e.getX(), getWidth(), getHeight()),
-                        Viewport.mouseY(e.getY(), getWidth(), getHeight()),
-                        side, side, zoomIn);
-        });
-        addMouseListener(new MouseAdapter() {
-            @Override public void mousePressed(MouseEvent e) {
-                requestFocusInWindow();          // TAB tuslarini alabilmek icin
-                if (!javax.swing.SwingUtilities.isLeftMouseButton(e)) return;   // sag tik: menu
-                if (minimap.contains(e.getX(), e.getY(), getWidth(), getHeight())) {
-                    minimapDragging = true;
-                    minimap.navigate(camera, e.getX(), e.getY(), getWidth(), getHeight());
-                    return;
-                }
-                camera.panPress(e.getX(), e.getY());
-            }
-            @Override public void mouseReleased(MouseEvent e) {
-                minimapDragging = false;
-                camera.panRelease();
-            }
-        });
-        addMouseMotionListener(new MouseAdapter() {
-            @Override public void mouseDragged(MouseEvent e) {
-                if (minimapDragging) {           // minimap uzerinde surukleyerek de gezilir
-                    minimap.navigate(camera, e.getX(), e.getY(), getWidth(), getHeight());
-                    return;
-                }
-                int side = Viewport.side(getWidth(), getHeight());
-                camera.panDrag(e.getX(), e.getY(), side, side);
-            }
-        });
-
-        // TAB: minimap ac/kapa (odak gezinme tusu olmaktan cikarilir)
-        setFocusable(true);
-        setFocusTraversalKeysEnabled(false);
-        addKeyListener(new KeyAdapter() {
-            @Override public void keyPressed(KeyEvent e) {
-                if (e.getKeyCode() == KeyEvent.VK_TAB) minimap.toggle();
-            }
-        });
+    private static MarkStyle defaultMarkStyle() {
+        MarkStyle style = new MarkStyle();
+        style.setSize(18);
+        return style;
     }
 
-    /** Sag tik menusu (mark / change mark / unmark). Main tarafindan baglanir. */
+    // ---- builder erisimi: null vermek ozelligi kapatir ----
+    // (setBackground adi Component.setBackground ile cakisir, o yuzden ...Color)
+    public void setBackgroundColor(Color color) { if (color != null) this.background = color; }
+    public void setFirstColor(Color color)      { this.firstColor = color; }
+    public void setLastColor(Color color)       { this.lastColor = color; }
+    public void setGrid(GridLayer grid)         { this.grid = grid; }
+    public void setScanLine(ScanLine scanLine)  { this.scanLine = scanLine; }
+    public void setMarkStyle(MarkStyle style)   { this.markStyle = style; }
+    public void setIdLabel(IDLabel idLabel)     { this.idLabel = idLabel; }
+    public void setMinimap(Minimap minimap)     { this.minimap = minimap; }
+    public void setMarkMenuStyle(MarkMenuStyle style) { if (style != null) this.markMenuStyle = style; }
+
+    /** Mark ozelligi acik mi (mark menusu buna gore kurulur). */
+    public boolean hasMark() { return markStyle != null; }
+
+    /**
+     * Kamera kontrolleri (zoom / pan / minimap / TAB) CameraController ile
+     * baglanir. Builder, minimap gibi ozellikler ayarlandiktan SONRA cagirir;
+     * boylece hasMinimap(false) ile kapatilan minimap'e kontrol de kurulmaz.
+     */
+    public void installCameraController() {
+        new CameraController(this, camera, minimap).install();
+    }
+
+    /** Sag tik menusu (mark / unmark). Mark ozelligi acik canvas'lara AppBuilder baglar. */
     public void installMarkMenu(deneme.Simulation.Simulation simulation) {
-        MarkMenu.install(this, simulation, (eventX, eventY) -> {
+        TargetMarkController.install(this, simulation, markMenuStyle, (eventX, eventY) -> {
             int side = Viewport.side(getWidth(), getHeight());
             int localX = eventX - Viewport.offsetX(getWidth(), getHeight());
             int localY = eventY - Viewport.offsetY(getWidth(), getHeight());
@@ -141,47 +143,59 @@ public class CircularCanvas extends GLCanvas implements GLEventListener {
             double bearing = Math.atan2(dx, dy);             // kuzeyden saat yonunde
             if (bearing < 0) bearing += 2.0 * Math.PI;
 
-            int column = (int) Math.round(bearing / (2.0 * Math.PI) * SCREEN_RESOLUTION);
-            int row    = Math.round(radius * SCREEN_RESOLUTION);
-            if (column >= SCREEN_RESOLUTION) column -= SCREEN_RESOLUTION;   // 360 -> 0
-            if (row >= SCREEN_RESOLUTION) row = SCREEN_RESOLUTION - 1;
+            // simulasyon uzayi dunya uzayi ile ayni olcektedir (0..1000)
+            int column = (int) Math.round(bearing / (2.0 * Math.PI) * WORLD_SIZE);
+            int row    = Math.round(radius * WORLD_SIZE);
+            if (column >= WORLD_SIZE) column -= WORLD_SIZE;   // 360 -> 0
+            if (row >= WORLD_SIZE) row = (int) WORLD_SIZE - 1;
 
             return new int[] { column, row };
         });
     }
 
-    public void startConsuming() { consumer.start(); }
-    public void stopConsuming()  { consumer.stop(); }
+    @Override public void startConsuming() { consumer.start(); }
+    @Override public void stopConsuming()  { consumer.stop(); }
 
     private class RowConsumer extends MessageConsumer {
         RowConsumer(BlockingQueue<QueueMessage> queue) { super(queue); }
 
         @Override
         public void processMessage(QueueMessage message) {
-            int row = message.getRow();
-            if (row >= 0 && row < SCREEN_RESOLUTION) {
-                image[row] = message.getData();
-                scanRowIndex = row;
+            double[] data = message.getData();
+            if (data == null) return;
+
+            // kaynak (simulasyon) cozunurlugu ile canvas cozunurlugu farkliysa ornekle
+            int sourceResolution = data.length;
+            int row = message.getRow() * resolution / sourceResolution;
+            if (row < 0 || row >= resolution) return;
+
+            if (sourceResolution == resolution) {
+                image[row] = data;
+            } else {
+                double[] sampled = new double[resolution];
+                for (int col = 0; col < resolution; col++) {
+                    sampled[col] = data[col * sourceResolution / resolution];
+                }
+                image[row] = sampled;
             }
+            scanRowIndex = row;
         }
     }
 
     @Override
     public void init(GLAutoDrawable drawable) {
         GL2 gl = drawable.getGL().getGL2();
-        gl.glClearColor(0f, 0.18f, 0f, 1f);
+        gl.glClearColor(background.getRed() / 255f, background.getGreen() / 255f,
+                        background.getBlue() / 255f, 1f);
         shader.init(gl);
-        grid.init(gl);
-        text = new TextRenderer(new Font("SansSerif", Font.BOLD, 16), true, true);
+        if (grid != null) grid.init(gl);
 
-        int[] ids = new int[3];
-        gl.glGenBuffers(3, ids, 0);
+        int[] ids = new int[1];
+        gl.glGenBuffers(1, ids, 0);
         quadVBO = ids[0];
-        scanVBO = ids[1];
-        rimVBO  = ids[2];
 
-        // ekrani kaplayan dortgen: dunya [0,SIZE] x [0,SIZE], UV [0,1] x [0,1]
-        float S = SCREEN_RESOLUTION;
+        // ekrani kaplayan dortgen: dunya [0,WORLD] x [0,WORLD], UV [0,1] x [0,1]
+        float S = WORLD_SIZE;
         float[] quad = {
             0f, 0f, 0f, 0f,
             S,  0f, 1f, 0f,
@@ -191,18 +205,6 @@ public class CircularCanvas extends GLCanvas implements GLEventListener {
         gl.glBindBuffer(GL.GL_ARRAY_BUFFER, quadVBO);
         gl.glBufferData(GL.GL_ARRAY_BUFFER, (long) quad.length * Float.BYTES,
                 FloatBuffer.wrap(quad), GL.GL_STATIC_DRAW);
-
-        // scan halkasi (dinamik, yaricapi her karede degisir)
-        gl.glBindBuffer(GL.GL_ARRAY_BUFFER, scanVBO);
-        gl.glBufferData(GL.GL_ARRAY_BUFFER, (long) scanData.length * Float.BYTES,
-                null, GL.GL_DYNAMIC_DRAW);
-
-        // sabit beyaz dis cember (radius = MAX_RADIUS)
-        float[] rim = new float[RING_SEGMENTS * 2];
-        buildRing(rim, MAX_RADIUS);
-        gl.glBindBuffer(GL.GL_ARRAY_BUFFER, rimVBO);
-        gl.glBufferData(GL.GL_ARRAY_BUFFER, (long) rim.length * Float.BYTES,
-                FloatBuffer.wrap(rim), GL.GL_STATIC_DRAW);
 
         // gain texture
         int[] tex = new int[1];
@@ -214,17 +216,8 @@ public class CircularCanvas extends GLCanvas implements GLEventListener {
         gl.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_S, GL.GL_REPEAT);          // aci -> sarilir
         gl.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_T, GL.GL_CLAMP_TO_EDGE);   // menzil -> kenara kis
         gl.glTexImage2D(GL.GL_TEXTURE_2D, 0, GL2.GL_R32F,
-                SCREEN_RESOLUTION, SCREEN_RESOLUTION, 0,
+                resolution, resolution, 0,
                 GL2.GL_RED, GL.GL_FLOAT, null);
-    }
-
-    // merkez etrafinda verilen yaricapta cember noktalari uretir (LINE_LOOP icin)
-    private void buildRing(float[] out, float radius) {
-        for (int k = 0; k < RING_SEGMENTS; k++) {
-            double theta = 2.0 * Math.PI * k / RING_SEGMENTS;
-            out[2 * k]     = CENTER + radius * (float) Math.cos(theta);
-            out[2 * k + 1] = CENTER + radius * (float) Math.sin(theta);
-        }
     }
 
     @Override
@@ -237,87 +230,113 @@ public class CircularCanvas extends GLCanvas implements GLEventListener {
 
         // ---- gain grid'ini texture'a yukle ----
         int i = 0;
-        for (int row = 0; row < SCREEN_RESOLUTION; row++) {
+        for (int row = 0; row < resolution; row++) {
             double[] r = image[row];
-            for (int col = 0; col < SCREEN_RESOLUTION; col++) {
+            for (int col = 0; col < resolution; col++) {
                 gainData[i++] = (float) r[col];
             }
         }
         gl.glActiveTexture(GL.GL_TEXTURE0);
         gl.glBindTexture(GL.GL_TEXTURE_2D, gainTex);
         gl.glTexSubImage2D(GL.GL_TEXTURE_2D, 0, 0, 0,
-                SCREEN_RESOLUTION, SCREEN_RESOLUTION,
+                resolution, resolution,
                 GL2.GL_LUMINANCE, GL.GL_FLOAT, FloatBuffer.wrap(gainData));
 
         // ---- kutupsal gain gorseli ----
-        shader.use(gl);
-        shader.setMatrix(gl, matrix);
-        shader.setGainFilter(gl, GainFilterSlider.filterMin(), GainFilterSlider.filterMax());
-        shader.bindVertices(gl, quadVBO);
-        gl.glDrawArrays(GL.GL_TRIANGLE_STRIP, 0, 4);
+        drawGain(gl, matrix);
 
         // ---- scan halkasi: merkezden buyuyen cember ----
-        float scanRadius = scanRowIndex * (MAX_RADIUS / SCREEN_RESOLUTION);
-        buildRing(scanData, scanRadius);
-        gl.glBindBuffer(GL.GL_ARRAY_BUFFER, scanVBO);
-        gl.glBufferSubData(GL.GL_ARRAY_BUFFER, 0,
-                (long) scanData.length * Float.BYTES, FloatBuffer.wrap(scanData));
-
-        shader.useScan(gl);
-        shader.setScanMatrix(gl, matrix);
-        shader.setScanColor(gl, 0.3f, 1.0f, 0.4f);
-        shader.bindScanPosition(gl, scanVBO);
-        gl.glLineWidth(2f);
-        gl.glDrawArrays(GL.GL_LINE_LOOP, 0, RING_SEGMENTS);
+        if (scanLine != null) {
+            float scanRadius = scanRowIndex * (MAX_RADIUS / resolution);
+            scanLine.draw(gl, matrix, CENTER, CENTER, scanRadius);
+        }
 
         // ---- dis cember: beyaz ----
-        shader.setScanColor(gl, 1.0f, 1.0f, 1.0f);
-        shader.bindScanPosition(gl, rimVBO);
-        gl.glLineWidth(2f);
-        gl.glDrawArrays(GL.GL_LINE_LOOP, 0, RING_SEGMENTS);
-        gl.glLineWidth(1f);
+        drawRim(gl, matrix);
 
         // ---- grid: halkalar + aci cizgileri + etiketler ----
-        grid.draw(gl, matrix, viewWidth, viewHeight);
+        if (grid != null) grid.draw(gl, matrix, viewWidth, viewHeight);
 
-        // ---- tanimli hedefler: cember + ID (polar konum) ----
-        Mark.draw(gl, text, matrix, viewWidth, viewHeight, 18f,
-                  GainFilterSlider.filterMin(), GainFilterSlider.filterMax(), m -> {
-            // shader ile ayni eslesme: a = bearing/2pi  =>  bearing = x/SIZE * 2pi
-            // bearing kuzeyden (yukari) saat yonunde olculur: x = sin, y = cos
-            double bearing = 2.0 * Math.PI * (m.getCenterX() / (double) SCREEN_RESOLUTION);
-            float rad = (float) (m.getCenterY() / (double) SCREEN_RESOLUTION * MAX_RADIUS);
+        // ---- tanimli hedefler: mark sekli + ID (polar konum) ----
+        // shader ile ayni eslesme: a = bearing/2pi  =>  bearing = x/WORLD * 2pi
+        // bearing kuzeyden (yukari) saat yonunde olculur: x = sin, y = cos
+        Mark.Mapper mapper = m -> {
+            double bearing = 2.0 * Math.PI * (m.getCenterX() / (double) WORLD_SIZE);
+            float rad = (float) (m.getCenterY() / (double) WORLD_SIZE * MAX_RADIUS);
             return new float[] { CENTER + rad * (float) Math.sin(bearing),
                                  CENTER + rad * (float) Math.cos(bearing) };
-        });
+        };
+        if (markStyle != null) {
+            Mark.draw(gl, matrix, markStyle,
+                    GainFilterSlider.filterMin(), GainFilterSlider.filterMax(), mapper);
+        }
+        if (idLabel != null) {
+            float anchor = (markStyle != null) ? markStyle.getSize() : 0f;
+            idLabel.draw(gl, matrix, viewWidth, viewHeight, anchor,
+                    GainFilterSlider.filterMin(), GainFilterSlider.filterMax(), mapper);
+        }
 
         drawMinimap(gl);
     }
 
-    /** Sol ustte, haritanin 1/4 olcekli aynisi: ayni polar gorsel + halkalar, gridsiz. */
+    /** Gain dortgenini secili gradyan/zemin renkleriyle cizer. */
+    private void drawGain(GL2 gl, float[] m) {
+        shader.use(gl);
+        // cember disi (ve filtrelenen) alanin rengi
+        shader.setBackground(gl, background.getRed() / 255f,
+                background.getGreen() / 255f, background.getBlue() / 255f);
+        if (firstColor != null) {
+            shader.setDarkGreen(gl, firstColor.getRed() / 255f,
+                    firstColor.getGreen() / 255f, firstColor.getBlue() / 255f);
+        }
+        if (lastColor != null) {
+            shader.setLightGreen(gl, lastColor.getRed() / 255f,
+                    lastColor.getGreen() / 255f, lastColor.getBlue() / 255f);
+        }
+        shader.setMatrix(gl, m);
+        shader.setGainFilter(gl, GainFilterSlider.filterMin(), GainFilterSlider.filterMax());
+        shader.bindVertices(gl, quadVBO);
+        gl.glDrawArrays(GL.GL_TRIANGLE_STRIP, 0, 4);
+    }
+
+    /** Sabit beyaz dis cember (immediate mode). */
+    private void drawRim(GL2 gl, float[] m) {
+        gl.glUseProgram(0);
+        for (int k = 0; k < 8; k++) {
+            gl.glDisableVertexAttribArray(k);
+        }
+        gl.glBindBuffer(GL.GL_ARRAY_BUFFER, 0);
+        gl.glDisable(GL.GL_TEXTURE_2D);
+        gl.glMatrixMode(GL2.GL_PROJECTION);
+        gl.glLoadMatrixf(m, 0);
+        gl.glMatrixMode(GL2.GL_MODELVIEW);
+        gl.glLoadIdentity();
+
+        gl.glColor3f(1f, 1f, 1f);
+        gl.glLineWidth(2f);
+        gl.glBegin(GL.GL_LINE_LOOP);
+        for (int k = 0; k < RIM_SEGMENTS; k++) {
+            double theta = 2.0 * Math.PI * k / RIM_SEGMENTS;
+            gl.glVertex2f(CENTER + MAX_RADIUS * (float) Math.cos(theta),
+                          CENTER + MAX_RADIUS * (float) Math.sin(theta));
+        }
+        gl.glEnd();
+        gl.glLineWidth(1f);
+    }
+
+    /** Sol ustte, haritanin kucuk olcekli aynisi: ayni polar gorsel + halkalar, gridsiz. */
     private void drawMinimap(GL2 gl) {
-        if (!minimap.begin(gl, viewport)) return;
+        if (minimap == null || !minimap.begin(gl, viewport)) return;
 
         // kameradan bagimsiz: dunyanin tamami
         Camera.worldMatrix(miniMatrix, 0f, 0f, 2f, 2f);
 
-        shader.use(gl);
-        shader.setMatrix(gl, miniMatrix);
-        shader.setGainFilter(gl, GainFilterSlider.filterMin(), GainFilterSlider.filterMax());
-        shader.bindVertices(gl, quadVBO);
-        gl.glDrawArrays(GL.GL_TRIANGLE_STRIP, 0, 4);
-
-        // scan halkasi + dis cember (scanVBO bu karede zaten guncellendi)
-        shader.useScan(gl);
-        shader.setScanMatrix(gl, miniMatrix);
-        shader.setScanColor(gl, 0.3f, 1.0f, 0.4f);
-        shader.bindScanPosition(gl, scanVBO);
-        gl.glLineWidth(1f);
-        gl.glDrawArrays(GL.GL_LINE_LOOP, 0, RING_SEGMENTS);
-
-        shader.setScanColor(gl, 1.0f, 1.0f, 1.0f);
-        shader.bindScanPosition(gl, rimVBO);
-        gl.glDrawArrays(GL.GL_LINE_LOOP, 0, RING_SEGMENTS);
+        drawGain(gl, miniMatrix);
+        if (scanLine != null) {
+            float scanRadius = scanRowIndex * (MAX_RADIUS / resolution);
+            scanLine.draw(gl, miniMatrix, CENTER, CENTER, scanRadius);
+        }
+        drawRim(gl, miniMatrix);
 
         minimap.end(gl, viewport, camera);
     }
@@ -333,10 +352,10 @@ public class CircularCanvas extends GLCanvas implements GLEventListener {
     @Override
     public void dispose(GLAutoDrawable drawable) {
         GL2 gl = drawable.getGL().getGL2();
-        gl.glDeleteBuffers(3, new int[] { quadVBO, scanVBO, rimVBO }, 0);
+        gl.glDeleteBuffers(1, new int[] { quadVBO }, 0);
         gl.glDeleteTextures(1, new int[] { gainTex }, 0);
-        if (text != null) text.dispose();
-        grid.dispose(gl);
+        if (idLabel != null) idLabel.dispose();
+        if (grid != null) grid.dispose(gl);
         shader.dispose(gl);
     }
 }

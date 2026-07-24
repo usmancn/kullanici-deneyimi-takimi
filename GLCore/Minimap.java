@@ -14,6 +14,12 @@ public final class Minimap {
     /** Gorunur alan dortgeninin dunya sinirlarindan iceri cekilme payi. */
     private static final float RECT_INSET = 3f;
 
+    // ---- MinimapBuilder ile ayarlanan ozellikler (hepsinin default'u var) ----
+    private volatile float fraction = FRACTION;      // minimap kenari / cizim alani orani
+    private volatile boolean closable = true;        // TAB ile ac/kapa yapilabilir mi
+    private java.awt.Color borderColor = null;       // minimap cercevesi (null: cizilmez)
+    private java.awt.Color squareColor = new java.awt.Color(102, 204, 255);  // gorunur alan dortgeni
+
     private volatile boolean visible = true;
     private final float[] matrix = new float[16];
 
@@ -24,14 +30,23 @@ public final class Minimap {
         return visible;
     }
 
+    /** TAB ile ac/kapa; closable=false ise yok sayilir. */
     public void toggle() {
-        visible = !visible;
+        if (closable) visible = !visible;
     }
+
+    public void setFraction(double fraction) {
+        if (fraction > 0 && fraction <= 1) this.fraction = (float) fraction;
+    }
+
+    public void setClosable(boolean closable) { this.closable = closable; }
+    public void setBorderColor(java.awt.Color color) { this.borderColor = color; }
+    public void setSquareColor(java.awt.Color color) { if (color != null) this.squareColor = color; }
 
     public boolean begin(GL2 gl, Viewport viewport) {
         if (!visible) return false;
 
-        mapSide = Math.round(viewport.side() * FRACTION);
+        mapSide = Math.round(viewport.side() * fraction);
         if (mapSide < 8) return false;
 
         mapX = viewport.offsetX();
@@ -70,7 +85,8 @@ public final class Minimap {
         float minX = camera.minX() + RECT_INSET, maxX = camera.maxX() - RECT_INSET;
         float minY = camera.minY() + RECT_INSET, maxY = camera.maxY() - RECT_INSET;
 
-        gl.glColor3f(0.4f, 0.8f, 1f);
+        gl.glColor3f(squareColor.getRed() / 255f, squareColor.getGreen() / 255f,
+                     squareColor.getBlue() / 255f);
         gl.glLineWidth(2f);
         gl.glBegin(GL.GL_LINE_LOOP);
         gl.glVertex2f(minX, minY);
@@ -79,6 +95,22 @@ public final class Minimap {
         gl.glVertex2f(minX, maxY);
         gl.glEnd();
         gl.glLineWidth(1f);
+
+        // ---- minimap cercevesi (istenirse) : NDC kenarlari ----
+        if (borderColor != null) {
+            gl.glMatrixMode(GL2.GL_PROJECTION);
+            gl.glLoadIdentity();
+            gl.glColor3f(borderColor.getRed() / 255f, borderColor.getGreen() / 255f,
+                         borderColor.getBlue() / 255f);
+            gl.glLineWidth(2f);
+            gl.glBegin(GL.GL_LINE_LOOP);
+            gl.glVertex2f(-1f, -1f);
+            gl.glVertex2f( 1f, -1f);
+            gl.glVertex2f( 1f,  1f);
+            gl.glVertex2f(-1f,  1f);
+            gl.glEnd();
+            gl.glLineWidth(1f);
+        }
 
         // ---- alt ve sag kenar karartmasi: disa dogru koyulasan bant ----
         gl.glMatrixMode(GL2.GL_PROJECTION);
@@ -114,7 +146,7 @@ public final class Minimap {
     /** Tik minimap'in icinde mi (bilesen uzayi, sol-ust orijin). */
     public boolean contains(int eventX, int eventY, int componentWidth, int componentHeight) {
         if (!visible) return false;
-        int side = Math.round(Viewport.side(componentWidth, componentHeight) * FRACTION);
+        int side = Math.round(Viewport.side(componentWidth, componentHeight) * fraction);
         int localX = eventX - Viewport.offsetX(componentWidth, componentHeight);
         int localY = eventY - Viewport.offsetY(componentWidth, componentHeight);
         return localX >= 0 && localX < side && localY >= 0 && localY < side;
@@ -123,7 +155,7 @@ public final class Minimap {
     /** Tiklanan nokta ana gorunumun merkezi olur. */
     public void navigate(Camera camera, int eventX, int eventY,
                          int componentWidth, int componentHeight) {
-        int side = Math.round(Viewport.side(componentWidth, componentHeight) * FRACTION);
+        int side = Math.round(Viewport.side(componentWidth, componentHeight) * fraction);
         if (side <= 0) return;
 
         float fractionX = (eventX - Viewport.offsetX(componentWidth, componentHeight)) / (float) side;

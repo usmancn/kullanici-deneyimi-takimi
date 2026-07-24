@@ -23,17 +23,27 @@ public final class GridLayer {
     private static final float MAX_RADIUS = SCREEN_RESOLUTION * 0.5f;  // 500 -> ic teget cember
 
     private static final int RING_SEGMENTS = 128;
-    private static final int RADIAL_LINES = 12;                        // 30 derecede bir
-    private static final float RING_STEP = 0.25f;                      // 4 halka
+
+    public static final int DEFAULT_RADIAL_LINES = 12;                 // 30 derecede bir
+    public static final int DEFAULT_RING_COUNT = 4;
 
     private static final int FONT_SIZE = 12;
     private static final int PADDING = 6;
     private static final int EDGE_PADDING = 18;                        // etiketin ekran kenarina mesafesi
 
     // soluk gri-beyaz: gain gorseli uzerinde okunur ama bastirmaz
-    private static final float LINE_GRAY = 0.65f;
+    private static final java.awt.Color DEFAULT_LINE_COLOR = new java.awt.Color(166, 166, 166);
+
+    // ---- GridCircularBuilder ile ayarlanan ozellikler (hepsinin default'u var) ----
+    private int radialLines = DEFAULT_RADIAL_LINES;    // xLineCount: aci cizgisi sayisi
+    private int ringCount = DEFAULT_RING_COUNT;        // yLineCount: halka sayisi
+    private java.awt.Color lineColor = DEFAULT_LINE_COLOR;
 
     private TextRenderer text;
+
+    public void setXLineCount(int count) { if (count >= 1) this.radialLines = count; }
+    public void setYLineCount(int count) { if (count >= 1) this.ringCount = count; }
+    public void setLineColor(java.awt.Color color) { if (color != null) this.lineColor = color; }
 
     public void init(GL2 gl) {
         text = new TextRenderer(new Font("SansSerif", Font.BOLD, FONT_SIZE), true, true);
@@ -59,11 +69,13 @@ public final class GridLayer {
         gl.glMatrixMode(GL2.GL_MODELVIEW);
         gl.glLoadIdentity();
 
-        gl.glColor3f(LINE_GRAY, LINE_GRAY, LINE_GRAY);
+        gl.glColor3f(lineColor.getRed() / 255f, lineColor.getGreen() / 255f,
+                     lineColor.getBlue() / 255f);
         gl.glLineWidth(1f);
 
         // ic ice halkalar (sonar gibi dalga dalga)
-        for (float r = RING_STEP; r <= 1.0f + 1e-4f; r += RING_STEP) {
+        float ringStep = 1f / ringCount;
+        for (float r = ringStep; r <= 1.0f + 1e-4f; r += ringStep) {
             float radius = MAX_RADIUS * r;
             gl.glBegin(GL.GL_LINE_LOOP);
             for (int k = 0; k < RING_SEGMENTS; k++) {
@@ -76,7 +88,7 @@ public final class GridLayer {
 
         // radyal (aci) cizgileri: merkezden dis cembere
         gl.glBegin(GL.GL_LINES);
-        for (int i = 0; i < RADIAL_LINES; i++) {
+        for (int i = 0; i < radialLines; i++) {
             double bearing = bearing(i);
             gl.glVertex2f(CENTER, CENTER);
             gl.glVertex2f(CENTER + MAX_RADIUS * (float) Math.sin(bearing),
@@ -91,8 +103,8 @@ public final class GridLayer {
         float centerPixelX = pixelX(matrix, CENTER, CENTER, width);
         float centerPixelY = pixelY(matrix, CENTER, CENTER, height);
 
-        // --- aci etiketleri (0..330, 30 derecede bir; 0 kuzeyde, saat yonunde artar) ---
-        for (int i = 0; i < RADIAL_LINES; i++) {
+        // --- aci etiketleri (0 kuzeyde, saat yonunde artar) ---
+        for (int i = 0; i < radialLines; i++) {
             double bearing = bearing(i);
             // istenen konum: dis cemberin biraz disi
             float desired = MAX_RADIUS * 1.03f;
@@ -116,16 +128,16 @@ public final class GridLayer {
             int pixelX = Math.round(centerPixelX + dirX * finalLength);
             int pixelY = Math.round(centerPixelY + dirY * finalLength);
 
-            String label = (i * (360 / RADIAL_LINES)) + "°";
+            String label = Math.round(i * 360f / radialLines) + "°";
             int textWidth  = Math.round((float) text.getBounds(label).getWidth());
             int textHeight = Math.round((float) text.getBounds(label).getHeight());
             text.draw(label, pixelX - textWidth / 2, pixelY - textHeight / 2);
         }
 
-        // --- menzil etiketleri (4 halka: 250, 500, 750, 1000) ---
+        // --- menzil etiketleri (halka basina bir) ---
         // halkanin fiziksel yeri MAX_RADIUS*r, ustune yazilan menzil r * SCREEN_RESOLUTION;
         // boylece kare grafikle ayni 0..1000 olcegi gorunur
-        for (float r = RING_STEP; r <= 1.0f + 1e-4f; r += RING_STEP) {
+        for (float r = ringStep; r <= 1.0f + 1e-4f; r += ringStep) {
             float worldX = CENTER + MAX_RADIUS * r;
             float worldY = CENTER;
 
@@ -144,8 +156,8 @@ public final class GridLayer {
      * Shader'daki {@code a = atan(c.x, c.y) / 2pi} eslesmesinin tersidir; dunya yonu
      * {@code (sin(bearing), cos(bearing))} ile bulunur.
      */
-    private static double bearing(int index) {
-        return 2.0 * Math.PI * index / RADIAL_LINES;
+    private double bearing(int index) {
+        return 2.0 * Math.PI * index / radialLines;
     }
 
     /**

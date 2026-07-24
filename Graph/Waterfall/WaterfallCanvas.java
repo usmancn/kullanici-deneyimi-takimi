@@ -1,7 +1,6 @@
 package deneme.Graph.Waterfall;
 
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import java.awt.Color;
 import java.nio.FloatBuffer;
 import java.util.concurrent.BlockingQueue;
 
@@ -12,22 +11,37 @@ import com.jogamp.opengl.GLCapabilities;
 import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.awt.GLCanvas;
 
+import deneme.Controller.CameraController;
 import deneme.GLCore.Camera;
 import deneme.GLCore.ShaderProgram;
 import deneme.GLCore.Viewport;
+import deneme.Graph.IRadarCanvas;
 import deneme.MessageProcess.MessageConsumer;
 import deneme.MessageProcess.QueueMessage;
 
-public class WaterfallCanvas extends GLCanvas implements GLEventListener {
+/**
+ * Akan (waterfall) grafik. Grid / scanline / mark / ID / minimap gibi
+ * ozelliklerin HICBIRINE sahip degildir; sadece zemin rengi ve cozunurluk
+ * ayarlanabilir.
+ */
+public class WaterfallCanvas extends GLCanvas implements GLEventListener, IRadarCanvas {
 
-    private static final int SCREEN_RESOLUTION = 1000;
-    private static final int CELL_COUNT = SCREEN_RESOLUTION * SCREEN_RESOLUTION;
+    private static final long serialVersionUID = 1L;
+
+    public static final int DEFAULT_RESOLUTION = 1000;
+
+    /** Dunya boyu sabittir; resolution sadece veri gridini etkiler. */
+    private static final float WORLD_SIZE = Camera.WORLD_SIZE;
+
     // ARB_texture_float internal format (JOGL'de isimle acik degil, degeri 0x8818)
     private static final int GL_LUMINANCE32F_ARB = 0x8818;
 
+    private final int resolution;
+    private final int cellCount;
+
     // consumer thread'inin yazdigi, GL thread'inin okudugu paylasilan veri
     // image[SIZE-1] = en yeni satir (ust), image[0] = en eski (alt)
-    private final double[][] image = new double[SCREEN_RESOLUTION][SCREEN_RESOLUTION];
+    private final double[][] image;
 
     private final ShaderProgram shader = new ShaderProgram();
     private final RowConsumer consumer;
@@ -35,49 +49,47 @@ public class WaterfallCanvas extends GLCanvas implements GLEventListener {
     private final Camera camera = new Camera();
     private final Viewport viewport = new Viewport();
 
+    // ---- WaterfallCanvasBuilder ile ayarlanan ozellikler ----
+    private Color background = Color.BLACK;
+
     // GPU nesneleri
     private int quadVBO;   // ekrani kaplayan tek dortgen (4 vertex: x,y,u,v)
-    private int gainTex;   // gain grid'i (SIZE x SIZE texture)
+    private int gainTex;   // gain grid'i (resolution x resolution texture)
 
     // her karede yeniden doldurulan CPU tarafi diziler
-    private final float[] gainData = new float[CELL_COUNT];
+    private final float[] gainData;
     private final float[] matrix = new float[16];
 
     public WaterfallCanvas(GLCapabilities caps, BlockingQueue<QueueMessage> queue) {
+        this(caps, queue, DEFAULT_RESOLUTION);
+    }
+
+    public WaterfallCanvas(GLCapabilities caps, BlockingQueue<QueueMessage> queue, int resolution) {
         super(caps);
+        this.resolution = resolution;
+        this.cellCount = resolution * resolution;
+        this.image = new double[resolution][resolution];
+        this.gainData = new float[cellCount];
         this.consumer = new RowConsumer(queue);
         addGLEventListener(this);
         installCameraControls();
 
-        // baslangicta ekran bos (0 -> koyu yesil zemin)
-        for (int r = 0; r < SCREEN_RESOLUTION; r++) {
-            image[r] = new double[SCREEN_RESOLUTION];
+        // baslangicta ekran bos (0 -> zemin rengi)
+        for (int r = 0; r < resolution; r++) {
+            image[r] = new double[resolution];
         }
     }
 
+    // (setBackground adi Component.setBackground ile cakisir, o yuzden ...Color)
+    public void setBackgroundColor(Color color) { if (color != null) this.background = color; }
+
     private void installCameraControls() {
-        // fare konumlari kare cizim alanina gore hesaplanir (pencere daha buyuk olabilir)
-        addMouseWheelListener(e -> {
-            boolean zoomIn = e.getWheelRotation() < 0;   // teker yukari -> yakinlas
-            int side = Viewport.side(getWidth(), getHeight());
-            camera.zoom(Viewport.mouseX(e.getX(), getWidth(), getHeight()),
-                        Viewport.mouseY(e.getY(), getWidth(), getHeight()),
-                        side, side, zoomIn);
-        });
-        addMouseListener(new MouseAdapter() {
-            @Override public void mousePressed(MouseEvent e)  { camera.panPress(e.getX(), e.getY()); }
-            @Override public void mouseReleased(MouseEvent e) { camera.panRelease(); }
-        });
-        addMouseMotionListener(new MouseAdapter() {
-            @Override public void mouseDragged(MouseEvent e) {
-                int side = Viewport.side(getWidth(), getHeight());
-                camera.panDrag(e.getX(), e.getY(), side, side);
-            }
-        });
+        // sadece zoom + pan; minimap/TAB yok (waterfall hicbir ozellik almaz)
+        new CameraController(this, camera).install();
     }
 
-    public void startConsuming() { consumer.start(); }
-    public void stopConsuming()  { consumer.stop(); }
+    @Override public void startConsuming() { consumer.start(); }
+    @Override public void stopConsuming()  { consumer.stop(); }
 
     // consumer: satirlari asagi kaydir, en yeniyi uste koy (GL cagirma)
     private class RowConsumer extends MessageConsumer {
@@ -85,25 +97,40 @@ public class WaterfallCanvas extends GLCanvas implements GLEventListener {
 
         @Override
         public void processMessage(QueueMessage message) {
-            double[] newRow = message.getData();
-            // hepsini bir asagi kaydir 
-            for (int r = 0; r < SCREEN_RESOLUTION - 1; r++) {
+            double[] data = message.getData();
+            if (data == null) return;
+
+            // kaynak cozunurlugu farkliysa ornekle
+            double[] newRow;
+            int sourceResolution = data.length;
+            if (sourceResolution == resolution) {
+                newRow = data;
+            } else {
+                newRow = new double[resolution];
+                for (int col = 0; col < resolution; col++) {
+                    newRow[col] = data[col * sourceResolution / resolution];
+                }
+            }
+
+            // hepsini bir asagi kaydir
+            for (int r = 0; r < resolution - 1; r++) {
                 image[r] = image[r + 1];
             }
-            image[SCREEN_RESOLUTION - 1] = newRow;   // en yeni satir en uste
+            image[resolution - 1] = newRow;   // en yeni satir en uste
         }
     }
 
     @Override
     public void init(GLAutoDrawable drawable) {
         GL2 gl = drawable.getGL().getGL2();
-        gl.glClearColor(0f, 0f, 0f, 1f);
+        gl.glClearColor(background.getRed() / 255f, background.getGreen() / 255f,
+                        background.getBlue() / 255f, 1f);
 
         shader.init(gl);
 
-        // ekrani kaplayan dortgen: dunya [0,SIZE] x [0,SIZE], UV [0,1] x [0,1]
+        // ekrani kaplayan dortgen: dunya [0,WORLD] x [0,WORLD], UV [0,1] x [0,1]
         // interleaved: x, y, u, v  (TRIANGLE_STRIP sirasi)
-        float S = SCREEN_RESOLUTION;
+        float S = WORLD_SIZE;
         float[] quad = {
             0f, 0f, 0f, 0f,
             S,  0f, 1f, 0f,
@@ -119,7 +146,7 @@ public class WaterfallCanvas extends GLCanvas implements GLEventListener {
         gl.glBufferData(GL.GL_ARRAY_BUFFER, (long) quad.length * Float.BYTES,
                 FloatBuffer.wrap(quad), GL.GL_STATIC_DRAW);
 
-        
+
         int[] tex = new int[1];
         gl.glGenTextures(1, tex, 0);
         gainTex = tex[0];
@@ -128,9 +155,9 @@ public class WaterfallCanvas extends GLCanvas implements GLEventListener {
         gl.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MAG_FILTER, GL.GL_NEAREST);
         gl.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_S, GL.GL_CLAMP_TO_EDGE);
         gl.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_T, GL.GL_CLAMP_TO_EDGE);
-        
+
         gl.glTexImage2D(GL.GL_TEXTURE_2D, 0, GL_LUMINANCE32F_ARB,
-                SCREEN_RESOLUTION, SCREEN_RESOLUTION, 0,
+                resolution, resolution, 0,
                 GL2.GL_LUMINANCE, GL.GL_FLOAT, null);
     }
 
@@ -139,21 +166,21 @@ public class WaterfallCanvas extends GLCanvas implements GLEventListener {
         GL2 gl = drawable.getGL().getGL2();
         gl.glClear(GL.GL_COLOR_BUFFER_BIT);
 
-       
+
         camera.modelMatrix(matrix, 0f, 0f, 2f, 2f);
 
-        // gain grid'ini texture'a yukle 
+        // gain grid'ini texture'a yukle
         int i = 0;
-        for (int row = 0; row < SCREEN_RESOLUTION; row++) {
+        for (int row = 0; row < resolution; row++) {
             double[] r = image[row];
-            for (int col = 0; col < SCREEN_RESOLUTION; col++) {
+            for (int col = 0; col < resolution; col++) {
                 gainData[i++] = (float) r[col];
             }
         }
         gl.glActiveTexture(GL.GL_TEXTURE0);
         gl.glBindTexture(GL.GL_TEXTURE_2D, gainTex);
         gl.glTexSubImage2D(GL.GL_TEXTURE_2D, 0, 0, 0,
-                SCREEN_RESOLUTION, SCREEN_RESOLUTION,
+                resolution, resolution,
                 GL2.GL_LUMINANCE, GL.GL_FLOAT, FloatBuffer.wrap(gainData));
 
         // gain dortgenini ciz (texture'dan renklenir)
