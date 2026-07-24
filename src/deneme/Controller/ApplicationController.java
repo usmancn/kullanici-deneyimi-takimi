@@ -18,6 +18,18 @@ public class ApplicationController {
     private final RadarFrame frame;
 
     public ApplicationController(
+            RadarDataSource dataSource,
+            GraphBundle graphs,
+            RadarFrame frame
+    ) {
+        this.simulation = null;
+        this.dataSource = dataSource;
+        this.detector = null;
+        this.graphs = graphs;
+        this.frame = frame;
+    }
+
+    public ApplicationController(
             Simulation simulation,
             ObjectDetector detector,
             GraphBundle graphs,
@@ -31,10 +43,10 @@ public class ApplicationController {
     }
 
     public void install() {
-        if (graphs.square != null) {
+        if (simulation != null && graphs.square != null) {
             graphs.square.installTargetMarkController(simulation);
         }
-        if (graphs.circular != null) {
+        if (simulation != null && graphs.circular != null) {
             graphs.circular.installTargetMarkController(simulation);
         }
 
@@ -55,7 +67,9 @@ public class ApplicationController {
         graphs.startAnimators();
         graphs.startGraphs();
 
-        detector.start();
+        if (detector != null) {
+            detector.start();
+        }
         dataSource.start();
     }
 
@@ -63,7 +77,9 @@ public class ApplicationController {
         new Thread(() -> {
             dataSource.stop();
             graphs.stopGraphs();
-            detector.stop();
+            if (detector != null) {
+                detector.stop();
+            }
             graphs.stopAnimators();
         }).start();
     }

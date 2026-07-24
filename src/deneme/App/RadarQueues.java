@@ -15,10 +15,18 @@ public class RadarQueues {
     public final BlockingQueue<QueueMessage> detection = new LinkedBlockingQueue<>();
 
     public void subscribeAll(MessagePublisher publisher) {
+        subscribeGraphs(publisher);
+        subscribeDetection(publisher);
+    }
+
+    public void subscribeGraphs(MessagePublisher publisher) {
         publisher.subscribe(square);
         publisher.subscribe(waterfall);
         publisher.subscribe(line);
         publisher.subscribe(circular);
+    }
+
+    public void subscribeDetection(MessagePublisher publisher) {
         publisher.subscribe(detection);
     }
 }
