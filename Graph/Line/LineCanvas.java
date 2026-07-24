@@ -16,10 +16,10 @@ import deneme.GLCore.Viewport;
 import deneme.Graph.Line.ShaderProgram;
 import deneme.MessageProcess.MessageConsumer;
 import deneme.MessageProcess.QueueMessage;
-import deneme.Interfaces.GraphLifecycle;
+import deneme.Interfaces.RadarGraph;
 import deneme.Controller.CameraController;
 
-public class LineCanvas extends GLCanvas implements GLEventListener, GraphLifecycle{
+public class LineCanvas extends GLCanvas implements GLEventListener, RadarGraph{
 	
 	private static final int SCREEN_RESOLUTION = 1000;
 	
@@ -73,6 +73,11 @@ public class LineCanvas extends GLCanvas implements GLEventListener, GraphLifecy
         this.gainFilter = gainFilter;
         addGLEventListener(this);
         installCameraControls();
+    }
+
+    @Override
+    public GLCanvas canvas() {
+        return this;
     }
     
     private void installCameraControls() {
@@ -177,4 +182,3 @@ public class LineCanvas extends GLCanvas implements GLEventListener, GraphLifecy
 }
 	
 	
-

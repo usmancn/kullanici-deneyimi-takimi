@@ -21,14 +21,14 @@ import deneme.GLCore.Minimap;
 import deneme.GLCore.Viewport;
 import deneme.MessageProcess.MessageConsumer;
 import deneme.MessageProcess.QueueMessage;
-import deneme.Interfaces.GraphLifecycle;
+import deneme.Interfaces.RadarGraph;
 
 /**
  * Kutupsal (PPI) radar ekrani: RadarCanvas ile ayni gain -> renk mantigi,
  * ama kare yerine daire. Satir (row) = merkeze uzaklik (menzil), sutun (col) = aci.
  * Scanline merkezden buyuyen bir halka; dis cember beyaz.
  */
-public class CircularCanvas extends GLCanvas implements GLEventListener, GraphLifecycle {
+public class CircularCanvas extends GLCanvas implements GLEventListener, RadarGraph {
 
     private static final int SCREEN_RESOLUTION = 1000;
     private static final int CELL_COUNT = SCREEN_RESOLUTION * SCREEN_RESOLUTION;
@@ -72,6 +72,11 @@ public class CircularCanvas extends GLCanvas implements GLEventListener, GraphLi
         this.gainFilter = gainFilter;
         addGLEventListener(this);
         installCameraControls();
+    }
+
+    @Override
+    public GLCanvas canvas() {
+        return this;
     }
 
     private void installCameraControls() {

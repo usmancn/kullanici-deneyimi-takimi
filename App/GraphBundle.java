@@ -9,7 +9,7 @@ import deneme.Graph.Circular.CircularCanvas;
 import deneme.Graph.Line.LineCanvas;
 import deneme.Graph.Square.SquareCanvas;
 import deneme.Graph.Waterfall.WaterfallCanvas;
-import deneme.Interfaces.GraphLifecycle;
+import deneme.Interfaces.RadarGraph;
 import deneme.Simulation.GainFilterModel;
 
 public class GraphBundle {
@@ -19,7 +19,7 @@ public class GraphBundle {
     public final LineCanvas line;
     public final CircularCanvas circular;
 
-    public final List<GraphLifecycle> graphs;
+    public final List<RadarGraph> graphs;
     public final List<FPSAnimator> animators;
 
     public GraphBundle(GLCapabilities caps, RadarQueues queues, int fps, GainFilterModel gainFilter) {
@@ -44,13 +44,13 @@ public class GraphBundle {
     }
 
     public void startGraphs() {
-        for (GraphLifecycle graph : graphs) {
+        for (RadarGraph graph : graphs) {
             graph.startConsuming();
         }
     }
 
     public void stopGraphs() {
-        for (GraphLifecycle graph : graphs) {
+        for (RadarGraph graph : graphs) {
             graph.stopConsuming();
         }
     }

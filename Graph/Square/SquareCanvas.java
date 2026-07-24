@@ -22,9 +22,9 @@ import deneme.GLCore.ShaderProgram;
 import deneme.GLCore.Viewport;
 import deneme.MessageProcess.MessageConsumer;
 import deneme.MessageProcess.QueueMessage;
-import deneme.Interfaces.GraphLifecycle;
+import deneme.Interfaces.RadarGraph;
 
-public class SquareCanvas extends GLCanvas implements GLEventListener, GraphLifecycle{
+public class SquareCanvas extends GLCanvas implements GLEventListener, RadarGraph{
 
     private static final int SCREEN_RESOLUTION = 1000;
     private static final int CELL_COUNT = SCREEN_RESOLUTION * SCREEN_RESOLUTION;
@@ -63,6 +63,11 @@ public class SquareCanvas extends GLCanvas implements GLEventListener, GraphLife
         this.gainFilter = gainFilter;
         addGLEventListener(this);
         installCameraControls();
+    }
+
+    @Override
+    public GLCanvas canvas() {
+        return this;
     }
 
     private void installCameraControls() {
