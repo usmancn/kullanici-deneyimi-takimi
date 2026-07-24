@@ -6,21 +6,19 @@ import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.util.concurrent.CopyOnWriteArrayList;
-import deneme.Simulation.GainFilterModel;
 
 import javax.swing.JComponent;
+
+import deneme.Controller.GainFilterController;
+import deneme.Simulation.GainFilterModel;
 
 /**
  * Gain filtresi: cift baslikli (low/high) slider + baslik/etiket, tek bir bilesende.
  * (GainFilterPanel + GainRangeSlider birlestirilmis hali.)
  *
- * <p>Secilen [min, max] araligi global (statik) tutulur; radar canvas'lari her
- * karede {@link #filterMin()} / {@link #filterMax()} degerlerini okuyup shader'a
- * gonderir ve bu aralik disindaki gain'leri gizler. Boylece kullanici araligi
- * yukari cekince (or. 0.60-1.00) sadece gemiler (yuksek gain) gorunur.
+ * <p>Secilen [min, max] araligi {@link GainFilterModel} icinde tutulur. Slider
+ * sadece gorunumu ve kullaniciya gosterilen tutamak degerlerini yonetir.
  */
 public class GainFilterSlider extends JComponent {
 
@@ -49,8 +47,6 @@ public class GainFilterSlider extends JComponent {
     private final int max = SLIDER_MAX;
     private int low;
     private int high;
-    private boolean draggingLow = false;
-    private boolean draggingHigh = false;
 
     public GainFilterSlider(GainFilterModel model) {
         this.model = model;
@@ -61,50 +57,29 @@ public class GainFilterSlider extends JComponent {
         setBackground(BG);
         setPreferredSize(new Dimension(280, 74));
 
-        MouseAdapter mouseAdapter = new MouseAdapter() {
-            @Override
-            public void mousePressed(MouseEvent e) {
-                int x = e.getX();
-                int lowX  = getXForValue(low);
-                int highX = getXForValue(high);
-                if (Math.abs(x - lowX) < 12 && x <= highX) {
-                    draggingLow = true;
-                } else if (Math.abs(x - highX) < 12) {
-                    draggingHigh = true;
-                } else if (x < lowX) {
-                    setLowValue(getValueForX(x));
-                    draggingLow = true;
-                } else if (x > highX) {
-                    setHighValue(getValueForX(x));
-                    draggingHigh = true;
-                }
-            }
-
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                draggingLow = false;
-                draggingHigh = false;
-            }
-
-            @Override
-            public void mouseDragged(MouseEvent e) {
-                int val = getValueForX(e.getX());
-                if (draggingLow)       setLowValue(val);
-                else if (draggingHigh) setHighValue(val);
-            }
-        };
-        addMouseListener(mouseAdapter);
-        addMouseMotionListener(mouseAdapter);
+        new GainFilterController(this).install();
 
         INSTANCES.add(this);
     }
 
-    private void setLowValue(int l) {
+    public int lowThumbX() {
+        return getXForValue(low);
+    }
+
+    public int highThumbX() {
+        return getXForValue(high);
+    }
+
+    public int valueForX(int x) {
+        return getValueForX(x);
+    }
+
+    public void setLowValue(int l) {
         this.low = Math.max(min, Math.min(l, high));
         applyAndSync();
     }
 
-    private void setHighValue(int h) {
+    public void setHighValue(int h) {
         this.high = Math.min(max, Math.max(h, low));
         applyAndSync();
     }
