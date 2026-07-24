@@ -58,7 +58,7 @@ public class WaterfallCanvas extends GLCanvas implements GLEventListener, GraphL
 
     private void installCameraControls() {
         // fare konumlari kare cizim alanina gore hesaplanir (pencere daha buyuk olabilir)
-        new CameraController(this,camera).install();
+        new CameraController(this, camera).install();
     }
 
     @Override

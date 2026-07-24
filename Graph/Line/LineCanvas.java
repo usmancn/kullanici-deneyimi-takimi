@@ -10,7 +10,7 @@ import com.jogamp.opengl.GLCapabilities;
 import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.awt.GLCanvas;
 
-import deneme.App.GainFilterSlider;
+import deneme.Simulation.GainFilterModel;
 import deneme.GLCore.Camera;
 import deneme.GLCore.Viewport;
 import deneme.Graph.Line.ShaderProgram;
@@ -22,6 +22,8 @@ import deneme.Controller.CameraController;
 public class LineCanvas extends GLCanvas implements GLEventListener, GraphLifecycle{
 	
 	private static final int SCREEN_RESOLUTION = 1000;
+	
+	private final GainFilterModel gainFilter;
 
     // consumer thread'inin yazdigi, GL thread'inin okudugu paylasilan veri
     private final double[][] image = new double[SCREEN_RESOLUTION][SCREEN_RESOLUTION];   // kalici goruntu
@@ -65,9 +67,10 @@ public class LineCanvas extends GLCanvas implements GLEventListener, GraphLifecy
         }
     }
     
-    public LineCanvas(GLCapabilities caps, BlockingQueue<QueueMessage> queue) {
+    public LineCanvas(GLCapabilities caps, BlockingQueue<QueueMessage> queue, GainFilterModel gainFilter) {
         super(caps);
         this.consumer = new RowConsumer(queue);
+        this.gainFilter = gainFilter;
         addGLEventListener(this);
         installCameraControls();
     }
@@ -113,7 +116,7 @@ public class LineCanvas extends GLCanvas implements GLEventListener, GraphLifecy
 
         shader.use(gl);
         shader.setMatrix(gl, matrix);
-        shader.setGainFilter(gl, GainFilterSlider.filterMin(), GainFilterSlider.filterMax());
+        shader.setGainFilter(gl, gainFilter.filterMin(), gainFilter.filterMax());
         shader.bindVertices(gl, lineVBO);
         gl.glDrawArrays(GL.GL_LINE_STRIP, 0, SCREEN_RESOLUTION);
 
@@ -124,7 +127,7 @@ public class LineCanvas extends GLCanvas implements GLEventListener, GraphLifecy
 
         shader.useAverage(gl);
         shader.setAverageMatrix(gl, matrix);
-        shader.setAverageGainFilter(gl, GainFilterSlider.filterMin(), GainFilterSlider.filterMax());
+        shader.setAverageGainFilter(gl, gainFilter.filterMin(), gainFilter.filterMax());
         shader.bindAverageVertices(gl, averageVBO);
         gl.glDrawArrays(GL.GL_LINE_STRIP, 0, SCREEN_RESOLUTION);
 	}

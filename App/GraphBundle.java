@@ -10,6 +10,7 @@ import deneme.Graph.Line.LineCanvas;
 import deneme.Graph.Square.SquareCanvas;
 import deneme.Graph.Waterfall.WaterfallCanvas;
 import deneme.Interfaces.GraphLifecycle;
+import deneme.Simulation.GainFilterModel;
 
 public class GraphBundle {
 
@@ -21,11 +22,11 @@ public class GraphBundle {
     public final List<GraphLifecycle> graphs;
     public final List<FPSAnimator> animators;
 
-    public GraphBundle(GLCapabilities caps, RadarQueues queues, int fps) {
-        square = new SquareCanvas(caps, queues.square);
-        waterfall = new WaterfallCanvas(caps, queues.waterfall);
-        line = new LineCanvas(caps, queues.line);
-        circular = new CircularCanvas(caps, queues.circular);
+    public GraphBundle(GLCapabilities caps, RadarQueues queues, int fps, GainFilterModel gainFilter) {
+    	square = new SquareCanvas(caps, queues.square, gainFilter);
+    	waterfall = new WaterfallCanvas(caps, queues.waterfall);
+    	line = new LineCanvas(caps, queues.line, gainFilter);
+    	circular = new CircularCanvas(caps, queues.circular, gainFilter);
 
         graphs = List.of(
             square,

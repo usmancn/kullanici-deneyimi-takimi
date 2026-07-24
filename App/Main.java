@@ -9,6 +9,7 @@ import deneme.Detection.ObjectDetector;
 import deneme.MessageProcess.MessagePublisher;
 import deneme.Simulation.Simulation;
 import deneme.Controller.ApplicationController;
+import deneme.Simulation.GainFilterModel;
 
 public class Main{
 
@@ -40,14 +41,16 @@ public class Main{
         // heavyweight popup: GLCanvas uzerinde hafif popup'lar gorunmez
         javax.swing.JPopupMenu.setDefaultLightWeightPopupEnabled(false);
 
+        GainFilterModel gainFilter = new GainFilterModel();
+
         // ---- 3) OpenGL graph'larini kur ----
         GLProfile profile = GLProfile.get(GLProfile.GL2);
         GLCapabilities caps = new GLCapabilities(profile);
         
-        GraphBundle graphs = new GraphBundle(caps, queues, FPS);
-
+        GraphBundle graphs = new GraphBundle(caps, queues, FPS, gainFilter);
+        
         // ---- 4) pencereyi kur ----	
-        GainFilterSlider gainSlider = new GainFilterSlider();
+        GainFilterSlider gainSlider = new GainFilterSlider(gainFilter);
         RadarFrame frame = new RadarFrame(graphs, gainSlider);
         
         ApplicationController appController = new ApplicationController(simulation, detector, graphs, frame);

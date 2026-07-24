@@ -12,7 +12,7 @@ import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.awt.GLCanvas;
 import com.jogamp.opengl.util.awt.TextRenderer;
 
-import deneme.App.GainFilterSlider;
+import deneme.Simulation.GainFilterModel;
 import deneme.Controller.TargetMarkController;
 import deneme.Controller.CameraController;
 import deneme.GLCore.Camera;
@@ -29,6 +29,7 @@ public class SquareCanvas extends GLCanvas implements GLEventListener, GraphLife
     private static final int SCREEN_RESOLUTION = 1000;
     private static final int CELL_COUNT = SCREEN_RESOLUTION * SCREEN_RESOLUTION;
 
+    private final GainFilterModel gainFilter;
     // consumer thread'inin yazdigi, GL thread'inin okudugu paylasilan veri
     private final double[][] image = new double[SCREEN_RESOLUTION][SCREEN_RESOLUTION];   // kalici gorunti
     private volatile int scanRowIndex = 0;                     // scanline konumu
@@ -55,10 +56,11 @@ public class SquareCanvas extends GLCanvas implements GLEventListener, GraphLife
 
     private int viewWidth = SCREEN_RESOLUTION;
     private int viewHeight = SCREEN_RESOLUTION;
-
-    public SquareCanvas(GLCapabilities caps, BlockingQueue<QueueMessage> queue) {
+  
+    public SquareCanvas(GLCapabilities caps, BlockingQueue<QueueMessage> queue, GainFilterModel gainFilter) {
         super(caps);
         this.consumer = new RowConsumer(queue);
+        this.gainFilter = gainFilter;
         addGLEventListener(this);
         installCameraControls();
     }
@@ -183,7 +185,7 @@ public class SquareCanvas extends GLCanvas implements GLEventListener, GraphLife
 
         shader.use(gl);
         shader.setMatrix(gl, matrix);
-        shader.setGainFilter(gl, GainFilterSlider.filterMin(), GainFilterSlider.filterMax());
+        shader.setGainFilter(gl, gainFilter.filterMin(), gainFilter.filterMax());
         shader.bindVertices(gl, quadVBO);
         gl.glDrawArrays(GL.GL_TRIANGLE_STRIP, 0, 4);
 
@@ -206,7 +208,7 @@ public class SquareCanvas extends GLCanvas implements GLEventListener, GraphLife
 
         // ---- tanimli hedefler: cember + ID (kare konum) ----
         Mark.draw(gl, text, matrix, viewWidth, viewHeight, 22f,
-                GainFilterSlider.filterMin(), GainFilterSlider.filterMax(),
+                gainFilter.filterMin(), gainFilter.filterMax(),
                 m -> new float[] { m.getCenterX(), m.getCenterY() });
 
         drawMinimap(gl);
@@ -221,7 +223,7 @@ public class SquareCanvas extends GLCanvas implements GLEventListener, GraphLife
 
         shader.use(gl);
         shader.setMatrix(gl, miniMatrix);
-        shader.setGainFilter(gl, GainFilterSlider.filterMin(), GainFilterSlider.filterMax());
+        shader.setGainFilter(gl, gainFilter.filterMin(), gainFilter.filterMax());
         shader.bindVertices(gl, quadVBO);
         gl.glDrawArrays(GL.GL_TRIANGLE_STRIP, 0, 4);
         shader.useScan(gl);

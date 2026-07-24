@@ -12,7 +12,7 @@ import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.awt.GLCanvas;
 import com.jogamp.opengl.util.awt.TextRenderer;
 
-import deneme.App.GainFilterSlider;
+import deneme.Simulation.GainFilterModel;
 import deneme.Controller.TargetMarkController;
 import deneme.Controller.CameraController;
 import deneme.GLCore.Camera;
@@ -36,6 +36,8 @@ public class CircularCanvas extends GLCanvas implements GLEventListener, GraphLi
     private static final float MAX_RADIUS = SCREEN_RESOLUTION * 0.5f;  // 500 -> ic teget cember
     private static final int RING_SEGMENTS = 360;                      // scan halkasi / dis cember cozunurlugu
 
+    private final GainFilterModel gainFilter;
+    
     // consumer thread'inin yazdigi, GL thread'inin okudugu paylasilan veri
     private final double[][] image = new double[SCREEN_RESOLUTION][SCREEN_RESOLUTION];
     private volatile int scanRowIndex = 0;
@@ -64,9 +66,10 @@ public class CircularCanvas extends GLCanvas implements GLEventListener, GraphLi
     private int viewWidth = SCREEN_RESOLUTION;
     private int viewHeight = SCREEN_RESOLUTION;
 
-    public CircularCanvas(GLCapabilities caps, BlockingQueue<QueueMessage> queue) {
+    public CircularCanvas(GLCapabilities caps, BlockingQueue<QueueMessage> queue, GainFilterModel gainFilter) {
         super(caps);
         this.consumer = new RowConsumer(queue);
+        this.gainFilter = gainFilter;
         addGLEventListener(this);
         installCameraControls();
     }
@@ -209,7 +212,7 @@ public class CircularCanvas extends GLCanvas implements GLEventListener, GraphLi
         // ---- kutupsal gain gorseli ----
         shader.use(gl);
         shader.setMatrix(gl, matrix);
-        shader.setGainFilter(gl, GainFilterSlider.filterMin(), GainFilterSlider.filterMax());
+        shader.setGainFilter(gl, gainFilter.filterMin(), gainFilter.filterMax());
         shader.bindVertices(gl, quadVBO);
         gl.glDrawArrays(GL.GL_TRIANGLE_STRIP, 0, 4);
 
@@ -239,7 +242,7 @@ public class CircularCanvas extends GLCanvas implements GLEventListener, GraphLi
 
         // ---- tanimli hedefler: cember + ID (polar konum) ----
         Mark.draw(gl, text, matrix, viewWidth, viewHeight, 18f,
-                  GainFilterSlider.filterMin(), GainFilterSlider.filterMax(), m -> {
+                  gainFilter.filterMin(), gainFilter.filterMax(), m -> {
             // shader ile ayni eslesme: a = bearing/2pi  =>  bearing = x/SIZE * 2pi
             // bearing kuzeyden (yukari) saat yonunde olculur: x = sin, y = cos
             double bearing = 2.0 * Math.PI * (m.getCenterX() / (double) SCREEN_RESOLUTION);
@@ -260,7 +263,7 @@ public class CircularCanvas extends GLCanvas implements GLEventListener, GraphLi
 
         shader.use(gl);
         shader.setMatrix(gl, miniMatrix);
-        shader.setGainFilter(gl, GainFilterSlider.filterMin(), GainFilterSlider.filterMax());
+        shader.setGainFilter(gl, gainFilter.filterMin(), gainFilter.filterMax());
         shader.bindVertices(gl, quadVBO);
         gl.glDrawArrays(GL.GL_TRIANGLE_STRIP, 0, 4);
 

@@ -9,6 +9,7 @@ import java.awt.RenderingHints;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.concurrent.CopyOnWriteArrayList;
+import deneme.Simulation.GainFilterModel;
 
 import javax.swing.JComponent;
 
@@ -39,9 +40,7 @@ public class GainFilterSlider extends JComponent {
     private static final Color TITLE_COLOR  = new Color(180, 190, 215);
     private static final Color VALUE_COLOR  = new Color(120, 190, 255);
 
-    /** Global filtre araligi (0..1). Canvas'lar buradan okur. */
-    private static volatile float gFilterMin = 0f;
-    private static volatile float gFilterMax = 1f;
+    private final GainFilterModel model;
 
     /** Acik tum slider'lar (senkron icin). */
     private static final CopyOnWriteArrayList<GainFilterSlider> INSTANCES = new CopyOnWriteArrayList<>();
@@ -53,10 +52,11 @@ public class GainFilterSlider extends JComponent {
     private boolean draggingLow = false;
     private boolean draggingHigh = false;
 
-    public GainFilterSlider() {
-        this.low  = toSlider(gFilterMin);
-        this.high = toSlider(gFilterMax);
-
+    public GainFilterSlider(GainFilterModel model) {
+        this.model = model;
+        this.low  = toSlider(model.filterMin());
+        this.high = toSlider(model.filterMax());
+        
         setOpaque(true);
         setBackground(BG);
         setPreferredSize(new Dimension(280, 74));
@@ -99,10 +99,6 @@ public class GainFilterSlider extends JComponent {
         INSTANCES.add(this);
     }
 
-    // ---- global filtre erisimi (canvas'lar kullanir) ----
-    public static float filterMin() { return gFilterMin; }
-    public static float filterMax() { return gFilterMax; }
-
     private void setLowValue(int l) {
         this.low = Math.max(min, Math.min(l, high));
         applyAndSync();
@@ -114,8 +110,7 @@ public class GainFilterSlider extends JComponent {
     }
 
     private void applyAndSync() {
-        gFilterMin = low / 100f;
-        gFilterMax = high / 100f;
+    	model.setRange(low / 100f, high / 100f);
         repaint();
         for (GainFilterSlider other : INSTANCES) {
             if (other == this) continue;
