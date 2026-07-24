@@ -18,6 +18,7 @@ import deneme.Controller.CameraController;
 import deneme.GLCore.Camera;
 import deneme.GLCore.Mark;
 import deneme.GLCore.Minimap;
+import deneme.GLCore.TargetStyle;
 import deneme.GLCore.Viewport;
 import deneme.MessageProcess.MessageConsumer;
 import deneme.MessageProcess.QueueMessage;
@@ -37,6 +38,7 @@ public class CircularCanvas extends GLCanvas implements GLEventListener, RadarGr
     private static final int RING_SEGMENTS = 360;                      // scan halkasi / dis cember cozunurlugu
 
     private final GainFilterModel gainFilter;
+    private final TargetStyle targetStyle;
     
     // consumer thread'inin yazdigi, GL thread'inin okudugu paylasilan veri
     private final double[][] image = new double[SCREEN_RESOLUTION][SCREEN_RESOLUTION];
@@ -67,9 +69,15 @@ public class CircularCanvas extends GLCanvas implements GLEventListener, RadarGr
     private int viewHeight = SCREEN_RESOLUTION;
 
     public CircularCanvas(GLCapabilities caps, BlockingQueue<QueueMessage> queue, GainFilterModel gainFilter) {
+        this(caps, queue, gainFilter, TargetStyle.defaults());
+    }
+
+    public CircularCanvas(GLCapabilities caps, BlockingQueue<QueueMessage> queue,
+                          GainFilterModel gainFilter, TargetStyle targetStyle) {
         super(caps);
         this.consumer = new RowConsumer(queue);
         this.gainFilter = gainFilter;
+        this.targetStyle = targetStyle;
         addGLEventListener(this);
         installCameraControls();
     }
@@ -247,7 +255,8 @@ public class CircularCanvas extends GLCanvas implements GLEventListener, RadarGr
 
         // ---- tanimli hedefler: cember + ID (polar konum) ----
         Mark.draw(gl, text, matrix, viewWidth, viewHeight, 18f,
-                  gainFilter.filterMin(), gainFilter.filterMax(), m -> {
+                  gainFilter.filterMin(), gainFilter.filterMax(),
+                  targetStyle, m -> {
             // shader ile ayni eslesme: a = bearing/2pi  =>  bearing = x/SIZE * 2pi
             // bearing kuzeyden (yukari) saat yonunde olculur: x = sin, y = cos
             double bearing = 2.0 * Math.PI * (m.getCenterX() / (double) SCREEN_RESOLUTION);

@@ -6,10 +6,11 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import deneme.Detection.TargetIdentifier;
+import deneme.Interfaces.RadarDataSource;
 import deneme.MessageProcess.MessagePublisher;
 import deneme.MessageProcess.QueueMessage;
 
-public class Simulation implements TargetIdentifier {
+public class Simulation implements TargetIdentifier, RadarDataSource {
 	private double[][] data;
 	private final MessagePublisher publisher;
 	private int targetCount;

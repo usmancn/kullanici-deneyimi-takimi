@@ -4,6 +4,7 @@ import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Dimension;
 import java.awt.GridLayout;
+import java.util.List;
 
 import javax.swing.ButtonGroup;
 import javax.swing.JFrame;
@@ -42,6 +43,27 @@ public class RadarFrame extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         showSquare();
+    }
+
+    public RadarFrame(List<GraphDefinition> graphDefinitions, GainFilterSlider gainSlider) {
+        super("Radar");
+
+        center.setPreferredSize(new Dimension(1000, 1000));
+        for (GraphDefinition definition : graphDefinitions) {
+            center.add(definition.graph().canvas(), definition.id());
+        }
+
+        setJMenuBar(buildMenuBar(graphDefinitions, gainSlider));
+        getContentPane().add(center, BorderLayout.CENTER);
+        getContentPane().add(gainSlider, BorderLayout.SOUTH);
+
+        pack();
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        if (!graphDefinitions.isEmpty()) {
+            cards.show(center, graphDefinitions.get(0).id());
+        }
     }
 
     public void showSquare() {
@@ -93,6 +115,27 @@ public class RadarFrame extends JFrame {
         menu.add(circular);
         bar.add(menu);
 
+        return bar;
+    }
+
+    private JMenuBar buildMenuBar(List<GraphDefinition> graphDefinitions, GainFilterSlider gainSlider) {
+        JMenuBar bar = new JMenuBar();
+        JMenu menu = new JMenu("Grafik");
+        ButtonGroup group = new ButtonGroup();
+
+        for (int i = 0; i < graphDefinitions.size(); i++) {
+            GraphDefinition definition = graphDefinitions.get(i);
+            JRadioButtonMenuItem item = new JRadioButtonMenuItem(definition.title(), i == 0);
+            group.add(item);
+            item.addActionListener(e -> {
+                cards.show(center, definition.id());
+                gainSlider.setVisible(true);
+                focusCurrentCard();
+            });
+            menu.add(item);
+        }
+
+        bar.add(menu);
         return bar;
     }
 }

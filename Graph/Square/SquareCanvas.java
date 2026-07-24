@@ -19,6 +19,7 @@ import deneme.GLCore.Camera;
 import deneme.GLCore.Mark;
 import deneme.GLCore.Minimap;
 import deneme.GLCore.ShaderProgram;
+import deneme.GLCore.TargetStyle;
 import deneme.GLCore.Viewport;
 import deneme.MessageProcess.MessageConsumer;
 import deneme.MessageProcess.QueueMessage;
@@ -30,6 +31,7 @@ public class SquareCanvas extends GLCanvas implements GLEventListener, RadarGrap
     private static final int CELL_COUNT = SCREEN_RESOLUTION * SCREEN_RESOLUTION;
 
     private final GainFilterModel gainFilter;
+    private final TargetStyle targetStyle;
     // consumer thread'inin yazdigi, GL thread'inin okudugu paylasilan veri
     private final double[][] image = new double[SCREEN_RESOLUTION][SCREEN_RESOLUTION];   // kalici gorunti
     private volatile int scanRowIndex = 0;                     // scanline konumu
@@ -58,9 +60,15 @@ public class SquareCanvas extends GLCanvas implements GLEventListener, RadarGrap
     private int viewHeight = SCREEN_RESOLUTION;
   
     public SquareCanvas(GLCapabilities caps, BlockingQueue<QueueMessage> queue, GainFilterModel gainFilter) {
+        this(caps, queue, gainFilter, TargetStyle.defaults());
+    }
+
+    public SquareCanvas(GLCapabilities caps, BlockingQueue<QueueMessage> queue,
+                        GainFilterModel gainFilter, TargetStyle targetStyle) {
         super(caps);
         this.consumer = new RowConsumer(queue);
         this.gainFilter = gainFilter;
+        this.targetStyle = targetStyle;
         addGLEventListener(this);
         installCameraControls();
     }
@@ -214,6 +222,7 @@ public class SquareCanvas extends GLCanvas implements GLEventListener, RadarGrap
         // ---- tanimli hedefler: cember + ID (kare konum) ----
         Mark.draw(gl, text, matrix, viewWidth, viewHeight, 22f,
                 gainFilter.filterMin(), gainFilter.filterMax(),
+                targetStyle,
                 m -> new float[] { m.getCenterX(), m.getCenterY() });
 
         drawMinimap(gl);

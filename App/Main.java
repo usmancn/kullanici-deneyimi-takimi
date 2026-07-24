@@ -47,7 +47,7 @@ public class Main{
         GLProfile profile = GLProfile.get(GLProfile.GL2);
         GLCapabilities caps = new GLCapabilities(profile);
         
-        GraphBundle graphs = new GraphBundle(caps, queues, FPS, gainFilter);
+        GraphBundle graphs = GraphFactory.createDefault(caps, queues, FPS, gainFilter);
         
         // ---- 4) pencereyi kur ----	
         GainFilterSlider gainSlider = new GainFilterSlider(gainFilter);

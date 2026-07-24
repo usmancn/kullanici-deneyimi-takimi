@@ -6,11 +6,13 @@ import java.awt.event.WindowEvent;
 import deneme.App.GraphBundle;
 import deneme.App.RadarFrame;
 import deneme.Detection.ObjectDetector;
+import deneme.Interfaces.RadarDataSource;
 import deneme.Simulation.Simulation;
 
 public class ApplicationController {
 
     private final Simulation simulation;
+    private final RadarDataSource dataSource;
     private final ObjectDetector detector;
     private final GraphBundle graphs;
     private final RadarFrame frame;
@@ -22,14 +24,19 @@ public class ApplicationController {
             RadarFrame frame
     ) {
         this.simulation = simulation;
+        this.dataSource = simulation;
         this.detector = detector;
         this.graphs = graphs;
         this.frame = frame;
     }
 
     public void install() {
-        graphs.square.installTargetMarkController(simulation);
-        graphs.circular.installTargetMarkController(simulation);
+        if (graphs.square != null) {
+            graphs.square.installTargetMarkController(simulation);
+        }
+        if (graphs.circular != null) {
+            graphs.circular.installTargetMarkController(simulation);
+        }
 
         frame.addWindowListener(new WindowAdapter() {
             @Override
@@ -41,18 +48,20 @@ public class ApplicationController {
 
     public void start() {
         frame.setVisible(true);
-        graphs.square.requestFocusInWindow();
+        if (graphs.firstCanvas() != null) {
+            graphs.firstCanvas().requestFocusInWindow();
+        }
 
         graphs.startAnimators();
         graphs.startGraphs();
 
         detector.start();
-        simulation.start();
+        dataSource.start();
     }
 
     public void stop() {
         new Thread(() -> {
-            simulation.stop();
+            dataSource.stop();
             graphs.stopGraphs();
             detector.stop();
             graphs.stopAnimators();

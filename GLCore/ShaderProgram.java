@@ -2,7 +2,9 @@ package deneme.GLCore;
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.GL2ES2;
-public class ShaderProgram {
+import deneme.Interfaces.ShaderLifecycle;
+
+public class ShaderProgram implements ShaderLifecycle {
 	// ---- Gain (data) programi ----
 	private static final String VERTEX_120 =
 	        "#version 120\n" +
@@ -129,8 +131,7 @@ public class ShaderProgram {
 
         gl.glUseProgram(program);
         gl.glUniform1i(uniformGainTex, 0);   // gainTex -> texture unit 0
-        setDarkGreen(gl,  0.0f, 0.0f, 0.0f);
-        setLightGreen(gl, 0.0f, 1f, 0.0f);
+        setGainColorMap(gl, GainColorMap.green());
         setLightRed(gl, 0.6f, 0.0f, 0.0f);
         setDarkRed(gl,  0.4f, 0.0f, 0.0f);
         setGainFilter(gl, 0.0f, 1.0f);   // baslangicta hepsi gorunur
@@ -177,6 +178,11 @@ public class ShaderProgram {
 
     public void setLightGreen(GL2 gl, float r, float g, float b) {
         gl.glUniform3f(uniformLightGreen, r, g, b);
+    }
+
+    public void setGainColorMap(GL2 gl, GainColorMap colorMap) {
+        setDarkGreen(gl, colorMap.lowRed, colorMap.lowGreen, colorMap.lowBlue);
+        setLightGreen(gl, colorMap.highRed, colorMap.highGreen, colorMap.highBlue);
     }
 
     public void setDarkRed(GL2 gl, float r, float g, float b) {

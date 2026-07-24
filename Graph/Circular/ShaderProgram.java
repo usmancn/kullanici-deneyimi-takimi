@@ -4,12 +4,15 @@ import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.GL2ES2;
 
+import deneme.GLCore.GainColorMap;
+import deneme.Interfaces.ShaderLifecycle;
+
 /**
  * RadarCanvas'in gain programinin kutupsal (PPI) versiyonu.
  * Fragment shader, ekrandaki her noktayi merkeze gore (aci, uzaklik)'a cevirip
  * gain texture'indan orneklir: u = aci, v = merkeze uzaklik.
  */
-public class ShaderProgram {
+public class ShaderProgram implements ShaderLifecycle {
 
     // ---- Gain (data) programi ----
     private static final String VERTEX_120 =
@@ -140,9 +143,7 @@ public class ShaderProgram {
 
         gl.glUseProgram(program);
         gl.glUniform1i(uniformGainTex, 0);   // gainTex -> texture unit 0
-        setDarkGreen(gl,  0.0f, 0.0f, 0.0f);
-        setLightGreen(gl, 0.0f, 1f, 0.0f);
-        setBackground(gl, 0.0f, 0.0f, 0.0f);    // cember disi (ve filtrelenen) alan siyah
+        setGainColorMap(gl, GainColorMap.green());
         setGainFilter(gl, 0.0f, 1.0f);          // baslangicta hepsi gorunur
 
         gl.glUseProgram(scanProgram);
@@ -169,6 +170,12 @@ public class ShaderProgram {
     public void setDarkGreen(GL2 gl, float r, float g, float b)  { gl.glUniform3f(uniformDarkGreen, r, g, b); }
     public void setLightGreen(GL2 gl, float r, float g, float b) { gl.glUniform3f(uniformLightGreen, r, g, b); }
     public void setBackground(GL2 gl, float r, float g, float b) { gl.glUniform3f(uniformBackground, r, g, b); }
+
+    public void setGainColorMap(GL2 gl, GainColorMap colorMap) {
+        setDarkGreen(gl, colorMap.lowRed, colorMap.lowGreen, colorMap.lowBlue);
+        setLightGreen(gl, colorMap.highRed, colorMap.highGreen, colorMap.highBlue);
+        setBackground(gl, colorMap.backgroundRed, colorMap.backgroundGreen, colorMap.backgroundBlue);
+    }
 
     /** Gain filtre araligi; [min,max] disindaki gain'ler gizlenir. */
     public void setGainFilter(GL2 gl, float min, float max) {

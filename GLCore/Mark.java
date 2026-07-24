@@ -28,8 +28,6 @@ public final class Mark {
     }
 
     private static final int CIRCLE_SEGMENTS = 48;
-    private static final int TEXT_MARGIN_PX = 4;   // ID ile cember arasi bosluk (piksel)
-
     /** ID -> mark (thread-safe). ID anahtar oldugu icin ayni hedef tekrar birikmez. */
     private static final ConcurrentHashMap<String, Mark> MARKS = new ConcurrentHashMap<>();
 
@@ -121,6 +119,14 @@ public final class Mark {
     public static void draw(GL2 gl, TextRenderer text, float[] matrix,
                             int width, int height, float radius,
                             float filterMin, float filterMax, Mapper mapper) {
+        draw(gl, text, matrix, width, height, radius,
+             filterMin, filterMax, TargetStyle.defaults(), mapper);
+    }
+
+    public static void draw(GL2 gl, TextRenderer text, float[] matrix,
+                            int width, int height, float radius,
+                            float filterMin, float filterMax,
+                            TargetStyle style, Mapper mapper) {
         if (MARKS.isEmpty()) return;
 
         // sadece gain'i filtre araliginda olanlar
@@ -144,8 +150,8 @@ public final class Mark {
         gl.glMatrixMode(GL2.GL_MODELVIEW);
         gl.glLoadIdentity();
 
-        gl.glColor3f(1f, 1f, 0f);
-        gl.glLineWidth(2f);
+        gl.glColor3f(style.markRed, style.markGreen, style.markBlue);
+        gl.glLineWidth(style.markLineWidth);
         for (Mark mark : marks) {
             if (!mark.marked) continue;      // isaretlenmemis hedefte sadece ID yazisi olur
             float[] p = mapper.world(mark);
@@ -162,7 +168,7 @@ public final class Mark {
         // ---- ID metinleri : ekran-uzayi, hedefin uzerinde (dunya -> piksel) ----
         // cemberin dikey yaricapinin piksel karsiligi: matrix[5] = 2/rangeY, ndc->px = height/2
         text.beginRendering(width, height);
-        text.setColor(1f, 1f, 1f, 1f);
+        text.setColor(style.labelRed, style.labelGreen, style.labelBlue, 1f);
         for (Mark mark : marks) {
             float[] p = mapper.world(mark);
             float clipX = matrix[0] * p[0] + matrix[4] * p[1] + matrix[12];
@@ -175,7 +181,7 @@ public final class Mark {
             // cemberin ust kenarini piksel olarak bul -> etiketi hemen ustune, yatayda ortali koy
             int radiusPx = Math.round(radius * Math.abs(matrix[5]) * height * 0.5f);
             int textWidth = Math.round((float) text.getBounds(mark.id).getWidth());
-            text.draw(mark.id, pixelX - textWidth / 2, pixelY + radiusPx + TEXT_MARGIN_PX);
+            text.draw(mark.id, pixelX - textWidth / 2, pixelY + radiusPx + style.labelMarginPx);
         }
         text.endRendering();
     }

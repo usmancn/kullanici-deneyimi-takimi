@@ -4,7 +4,9 @@ import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.GL2ES2;
 
-public class ShaderProgram {
+import deneme.Interfaces.ShaderLifecycle;
+
+public class ShaderProgram implements ShaderLifecycle {
 	private static final String VERTEX_120 =
 	        "#version 120\n" +
 	        "uniform mat4 matrix;\n" +
