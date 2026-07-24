@@ -19,7 +19,7 @@ public class Main{
 
     private static final int FPS = 40;
     private static final int DEFAULT_TARGET_COUNT = 15;
-    private static final File DEMO_IMAGE_FILE = new File("assets/waterfall-demo.png");
+    private static final File DEMO_IMAGE_FILE = new File("assets/shhh-dog-shhh.png");
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(Main::start);
