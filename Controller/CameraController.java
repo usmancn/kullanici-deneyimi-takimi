@@ -17,20 +17,43 @@ public final class CameraController {
     private final Component canvas;
     private final Camera camera;
     private final Minimap minimap;
+    private final CameraControlOptions options;
 
     private boolean minimapDragging = false;
 
     public CameraController(Component canvas, Camera camera, Minimap minimap) {
+        this(canvas, camera, minimap, CameraControlOptions.defaults());
+    }
+
+    public CameraController(Component canvas, Camera camera, Minimap minimap, CameraControlOptions options) {
         this.canvas = canvas;
         this.camera = camera;
         this.minimap = minimap;
+        this.options = options;
     }
     
     public CameraController(Component canvas, Camera camera) {
-        this(canvas, camera, null);
+        this(canvas, camera, null, CameraControlOptions.withoutMinimap());
     }
 
     public void install() {
+        canvas.setFocusable(true);
+        canvas.setFocusTraversalKeysEnabled(false);
+
+        if (options.zoomEnabled) {
+            installZoomControl();
+        }
+
+        if (options.panEnabled || options.minimapEnabled) {
+            installMouseNavigation();
+        }
+
+        if (options.keyboardEnabled) {
+            installKeyboardControl();
+        }
+    }
+
+    private void installZoomControl() {
         canvas.addMouseWheelListener(e -> {
             boolean zoomIn = e.getWheelRotation() < 0;
             int side = Viewport.side(canvas.getWidth(), canvas.getHeight());
@@ -43,7 +66,9 @@ public final class CameraController {
                     zoomIn
             );
         });
+    }
 
+    private void installMouseNavigation() {
         canvas.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
@@ -53,13 +78,16 @@ public final class CameraController {
                     return;
                 }
 
-                if (minimap != null && minimap.contains(e.getX(), e.getY(), canvas.getWidth(), canvas.getHeight())) {
+                if (canUseMinimap()
+                        && minimap.contains(e.getX(), e.getY(), canvas.getWidth(), canvas.getHeight())) {
                     minimapDragging = true;
                     minimap.navigate(camera, e.getX(), e.getY(), canvas.getWidth(), canvas.getHeight());
                     return;
                 }
 
-                camera.panPress(e.getX(), e.getY());
+                if (options.panEnabled) {
+                    camera.panPress(e.getX(), e.getY());
+                }
             }
 
             @Override
@@ -72,25 +100,33 @@ public final class CameraController {
         canvas.addMouseMotionListener(new MouseAdapter() {
             @Override
             public void mouseDragged(MouseEvent e) {
-            	if (minimap != null && minimapDragging) {
+            	if (canUseMinimap() && minimapDragging) {
             	    minimap.navigate(camera, e.getX(), e.getY(), canvas.getWidth(), canvas.getHeight());
             	    return;
             	}
+
+                if (!options.panEnabled) {
+                    return;
+                }
 
                 int side = Viewport.side(canvas.getWidth(), canvas.getHeight());
                 camera.panDrag(e.getX(), e.getY(), side, side);
             }
         });
+    }
 
-        canvas.setFocusable(true);
-        canvas.setFocusTraversalKeysEnabled(false);
+    private void installKeyboardControl() {
         canvas.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
-                if (minimap != null && e.getKeyCode() == KeyEvent.VK_TAB) {
+                if (canUseMinimap() && e.getKeyCode() == KeyEvent.VK_TAB) {
                     minimap.toggle();
                 }
             }
         });
+    }
+
+    private boolean canUseMinimap() {
+        return options.minimapEnabled && minimap != null;
     }
 }
